@@ -64,6 +64,8 @@ Assert-True ($workflow -match "retention-days:\s*1") "schema artifact must have 
 Assert-True ($workflow -match "timeout 15s ssh") "remote ssh operations must be hard-time bounded"
 Assert-True ($workflow -match "timeout 15s ssh-keyscan") "ssh-keyscan must be hard-time bounded"
 Assert-True ($workflow -match "DB_NAME=naeil_bank_dev") "schema workflow must target develop DB"
+Assert-True ($workflow -match "view_v_daily_net=true") "schema workflow must match psql boolean output"
+Assert-True ($workflow -match "view_v_balance=true") "schema workflow must match psql boolean output"
 Assert-True ($workflow -match "schema-contract-verdict\.txt") "schema workflow must record assertion verdict"
 Assert-True ($workflow -match "assertions=%s") "schema workflow must write machine-readable assertion status"
 Assert-True ($workflow -match "assertion_status=fail") "schema workflow must retain artifact when schema assertions fail"

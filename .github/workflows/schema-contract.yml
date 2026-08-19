@@ -66,8 +66,8 @@ jobs:
             < scripts/db/schema-contract-remote.sh \
             > .omo/evidence/schema-contract/schema-assertions.txt
           assertion_status=pass
-          grep -qx 'view_v_daily_net=t' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
-          grep -qx 'view_v_balance=t' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
+          grep -qx 'view_v_daily_net=true' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
+          grep -qx 'view_v_balance=true' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
           grep -Eq '^table_count=14$' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
           printf 'assertions=%s\n' "$assertion_status" > .omo/evidence/schema-contract/schema-contract-verdict.txt
 
