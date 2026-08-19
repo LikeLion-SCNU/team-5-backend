@@ -43,7 +43,7 @@
 | 브랜치 | 환경 | API 주소 | DB |
 |---|---|---|---|
 | `develop` | 개발 | http://1.201.116.27:8001 | naeil_bank_dev |
-| `main` | 운영(심사) | https://1.201.116.27.nip.io/api | naeil_bank |
+| `main` | 운영(심사) | https://timebank.hbinserver.cloud/api | naeil_bank |
 
 ### 브랜치 규칙
 1. 작업은 `develop`에서 (또는 feature 브랜치 → develop PR)
