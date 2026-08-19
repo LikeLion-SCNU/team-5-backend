@@ -11,7 +11,6 @@ import org.example.naeilbank.global.exception.ErrorCode;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.example.naeilbank.global.security.CustomUserDetails;
 import org.example.naeilbank.service.AuthService; // Service 위치 확인 필요
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Configuration
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor

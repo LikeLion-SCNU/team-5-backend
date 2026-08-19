@@ -10,7 +10,9 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.Map;
+import java.util.StringJoiner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,7 +70,7 @@ class ConfigurationPropertiesValidationTest {
                 .withPropertyValues("SPRING_DATASOURCE_PASSWORD=")
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure()).hasMessageContaining("password");
+                    assertThat(failureMessages(context.getStartupFailure())).contains("password");
                 });
     }
 
@@ -80,8 +82,8 @@ class ConfigurationPropertiesValidationTest {
                 .withPropertyValues("CORS_ORIGINS=*")
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasMessageContaining("credentialed CORS cannot use wildcard origins");
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("credentialed CORS cannot use wildcard origins");
                 });
     }
 
@@ -93,10 +95,10 @@ class ConfigurationPropertiesValidationTest {
                 .withPropertyValues("CORS_ORIGINS=")
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasMessageContaining("allowedOrigins")
-                            .hasMessageNotContaining("prod-vapid-private-key-fixture")
-                            .hasMessageNotContaining("prod-openai-api-key-fixture");
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("allowedOrigins")
+                            .doesNotContain("prod-vapid-private-key-fixture")
+                            .doesNotContain("prod-openai-api-key-fixture");
                 });
     }
 
@@ -108,11 +110,11 @@ class ConfigurationPropertiesValidationTest {
                 .withPropertyValues("JWT_SECRET=short-secret-value")
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasMessageContaining("size must be between 32")
-                            .hasMessageNotContaining("short-secret-value")
-                            .hasMessageNotContaining("prod-openai-api-key-fixture")
-                            .hasMessageNotContaining("prod-vapid-private-key-fixture");
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("size must be between 32")
+                            .doesNotContain("short-secret-value")
+                            .doesNotContain("prod-openai-api-key-fixture")
+                            .doesNotContain("prod-vapid-private-key-fixture");
                 });
     }
 
@@ -123,12 +125,34 @@ class ConfigurationPropertiesValidationTest {
                 .withPropertyValues(environmentName + "=")
                 .run(context -> {
                     assertThat(context).hasFailed();
-                    assertThat(context.getStartupFailure())
-                            .hasMessageContaining(expectedFieldName)
-                            .hasMessageNotContaining("prod-jwt-secret-fixture-32-bytes-minimum")
-                            .hasMessageNotContaining("prod-openai-api-key-fixture")
-                            .hasMessageNotContaining("prod-vapid-private-key-fixture");
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains(expectedFieldName)
+                            .doesNotContain("prod-jwt-secret-fixture-32-bytes-minimum")
+                            .doesNotContain("prod-openai-api-key-fixture")
+                            .doesNotContain("prod-vapid-private-key-fixture");
                 });
+    }
+
+    private String failureMessages(Throwable failure) {
+        StringJoiner messages = new StringJoiner("\n");
+        ArrayDeque<Throwable> queue = new ArrayDeque<>();
+        if (failure != null) {
+            queue.add(failure);
+        }
+        while (!queue.isEmpty()) {
+            Throwable current = queue.removeFirst();
+            if (current.getMessage() != null) {
+                messages.add(current.getMessage());
+            }
+            Throwable cause = current.getCause();
+            if (cause != null && cause != current) {
+                queue.add(cause);
+            }
+            for (Throwable suppressed : current.getSuppressed()) {
+                queue.add(suppressed);
+            }
+        }
+        return messages.toString();
     }
 
     private String[] validDeploymentEnvironment() {
