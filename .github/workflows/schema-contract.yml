@@ -1,0 +1,88 @@
+name: Schema Contract Capture
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/schema-contract.yml'
+      - 'scripts/db/schema-contract-remote.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-contract-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate schema contract tools
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/db/schema-contract-remote.sh
+
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$SERVER_HOST" || { echo 'MISSING_PREREQUISITE SERVER_HOST' >&2; exit 2; }
+          test -n "$SERVER_USER" || { echo 'MISSING_PREREQUISITE SERVER_USER' >&2; exit 2; }
+          test -n "$SERVER_SSH_KEY" || { echo 'MISSING_PREREQUISITE SERVER_SSH_KEY' >&2; exit 2; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          timeout 15s ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Capture sanitized develop schema
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -Eeuo pipefail
+          mkdir -p .omo/evidence/schema-contract
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "$SERVER_USER@$SERVER_HOST" \
+            'DB_NAME=naeil_bank_dev SCHEMA_CONTRACT_TIMEOUT_SECONDS=15 SCHEMA_CONTRACT_MODE=dump bash -s' \
+            < scripts/db/schema-contract-remote.sh \
+            > .omo/evidence/schema-contract/dev-schema-sanitized.sql
+
+      - name: Capture metadata assertions
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          set -Eeuo pipefail
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "$SERVER_USER@$SERVER_HOST" \
+            'DB_NAME=naeil_bank_dev SCHEMA_CONTRACT_TIMEOUT_SECONDS=15 SCHEMA_CONTRACT_MODE=assert bash -s' \
+            < scripts/db/schema-contract-remote.sh \
+            > .omo/evidence/schema-contract/schema-assertions.txt
+          grep -qx 'view_v_daily_net=t' .omo/evidence/schema-contract/schema-assertions.txt
+          grep -qx 'view_v_balance=t' .omo/evidence/schema-contract/schema-assertions.txt
+          grep -Eq '^table_count=14$' .omo/evidence/schema-contract/schema-assertions.txt
+
+      - name: Upload short-retention schema artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: develop-schema-contract
+          path: .omo/evidence/schema-contract/
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Cleanup runner credentials
+        if: always()
+        shell: bash
+        run: |
+          rm -f ~/.ssh/id_ed25519
