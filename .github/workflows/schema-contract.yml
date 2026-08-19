@@ -33,12 +33,10 @@ jobs:
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
           SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           set -Eeuo pipefail
           test -n "$SERVER_HOST" || { echo 'MISSING_PREREQUISITE SERVER_HOST' >&2; exit 2; }
-          test -n "$SERVER_USER" || { echo 'MISSING_PREREQUISITE SERVER_USER' >&2; exit 2; }
           test -n "$SERVER_SSH_KEY" || { echo 'MISSING_PREREQUISITE SERVER_SSH_KEY' >&2; exit 2; }
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/id_ed25519
@@ -49,11 +47,10 @@ jobs:
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
           set -Eeuo pipefail
           mkdir -p .omo/evidence/schema-contract
-          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "$SERVER_USER@$SERVER_HOST" \
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "ubuntu@$SERVER_HOST" \
             'DB_NAME=naeil_bank_dev SCHEMA_CONTRACT_TIMEOUT_SECONDS=15 SCHEMA_CONTRACT_MODE=dump bash -s' \
             < scripts/db/schema-contract-remote.sh \
             > .omo/evidence/schema-contract/dev-schema-sanitized.sql
@@ -62,10 +59,9 @@ jobs:
         shell: bash
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
           set -Eeuo pipefail
-          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "$SERVER_USER@$SERVER_HOST" \
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "ubuntu@$SERVER_HOST" \
             'DB_NAME=naeil_bank_dev SCHEMA_CONTRACT_TIMEOUT_SECONDS=15 SCHEMA_CONTRACT_MODE=assert bash -s' \
             < scripts/db/schema-contract-remote.sh \
             > .omo/evidence/schema-contract/schema-assertions.txt

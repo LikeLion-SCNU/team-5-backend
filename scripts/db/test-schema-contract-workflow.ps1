@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 
 $WorkflowPath = ".github/workflows/schema-contract.yml"
 $RemoteScriptPath = "scripts/db/schema-contract-remote.sh"
+$DeployWorkflowPath = ".github/workflows/deploy.yml"
 
 function Assert-True {
     param(
@@ -40,12 +41,14 @@ function Test-PgpassSecretModel {
 
 Assert-True (Test-Path -LiteralPath $WorkflowPath) "schema-contract workflow must exist"
 Assert-True (Test-Path -LiteralPath $RemoteScriptPath) "remote schema script must exist"
+Assert-True (Test-Path -LiteralPath $DeployWorkflowPath) "deploy workflow must exist"
 Assert-True (-not (Test-Path -LiteralPath "scripts/db/sanitize-schema.sh")) "sanitizer script must be removed"
 Assert-True (-not (Test-Path -LiteralPath "scripts/db/test-sanitize-schema.sh")) "sanitizer test must be removed"
 Assert-True (-not (Test-Path -LiteralPath "scripts/db/fixtures")) "sanitizer fixtures must be removed"
 
 $workflow = Get-Content -Raw -LiteralPath $WorkflowPath
 $remoteScript = Get-Content -Raw -LiteralPath $RemoteScriptPath
+$deployWorkflow = Get-Content -Raw -LiteralPath $DeployWorkflowPath
 
 Assert-True ($workflow -match "workflow_dispatch:") "workflow must keep manual dispatch"
 Assert-True ($workflow -match "(?m)^\s*push:") "schema workflow must run after initial schema-tool publish"
@@ -62,6 +65,9 @@ Assert-True ($workflow -match "timeout 15s ssh") "remote ssh operations must be 
 Assert-True ($workflow -match "timeout 15s ssh-keyscan") "ssh-keyscan must be hard-time bounded"
 Assert-True ($workflow -match "DB_NAME=naeil_bank_dev") "schema workflow must target develop DB"
 Assert-True ($workflow -notmatch "POSTGRES_PASSWORD|SERVER_DB_ENV_PATH") "workflow must not mention DB password or dotenv path"
+Assert-True ($workflow -notmatch "SERVER_USER") "schema workflow must not invent a SERVER_USER secret"
+Assert-True ($deployWorkflow.Contains('ubuntu@${{ secrets.SERVER_HOST }}')) "deploy workflow must use ubuntu SSH user"
+Assert-True ($workflow -match '"ubuntu@\$SERVER_HOST"') "schema workflow must reuse deploy SSH user"
 Assert-True ($workflow -notmatch "echo\s+[`"']?\$\{\{\s*secrets\.SERVER_SSH_KEY") "workflow must not echo SSH key"
 Assert-True ($workflow -match "Cleanup runner credentials") "workflow must remove runner SSH key"
 
