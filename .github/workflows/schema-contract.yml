@@ -65,9 +65,11 @@ jobs:
             'DB_NAME=naeil_bank_dev SCHEMA_CONTRACT_TIMEOUT_SECONDS=15 SCHEMA_CONTRACT_MODE=assert bash -s' \
             < scripts/db/schema-contract-remote.sh \
             > .omo/evidence/schema-contract/schema-assertions.txt
-          grep -qx 'view_v_daily_net=t' .omo/evidence/schema-contract/schema-assertions.txt
-          grep -qx 'view_v_balance=t' .omo/evidence/schema-contract/schema-assertions.txt
-          grep -Eq '^table_count=14$' .omo/evidence/schema-contract/schema-assertions.txt
+          assertion_status=pass
+          grep -qx 'view_v_daily_net=t' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
+          grep -qx 'view_v_balance=t' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
+          grep -Eq '^table_count=14$' .omo/evidence/schema-contract/schema-assertions.txt || assertion_status=fail
+          printf 'assertions=%s\n' "$assertion_status" > .omo/evidence/schema-contract/schema-contract-verdict.txt
 
       - name: Upload short-retention schema artifact
         uses: actions/upload-artifact@v4
