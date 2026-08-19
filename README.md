@@ -66,7 +66,7 @@ uvicorn main:app --reload   # http://localhost:8000/docs
 | 이름 | 역할 | GitHub |
 |---|---|---|
 | 박현빈 | PM · 인프라 | [@Hbin77](https://github.com/Hbin77) |
-| 허찬 |  |  |
-| 김민수 |  |  |
-| 서예슬 |  |  |
-| 지뇨쎄 |  |  |
+| 허찬 | 백엔드 | [@heochan7](https://github.com/heochan7) |
+| 김민수 | 백엔드 |  |
+| 서예슬 | 프론트엔드 |  |
+| 정연수 | 디자인 | [@wjddustn1](https://github.com/wjddustn1) |
