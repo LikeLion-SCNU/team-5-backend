@@ -3,7 +3,7 @@
 | 브랜치 | 환경 | 서버 주소 | DB |
 |---|---|---|---|
 | `develop` | 개발 | http://1.201.116.27:8001 | naeil_bank_dev |
-| `main` | 데모/운영 | http://1.201.116.27:8000 | naeil_bank |
+| `main` | 데모/운영 | https://timebank.hbinserver.cloud/api (직접: :8000) | naeil_bank |
 
 - push하면 GitHub Actions가 자동 배포합니다 (SSH 키 필요 없음)
 - `main`은 직접 push 금지 — develop → main PR로만
