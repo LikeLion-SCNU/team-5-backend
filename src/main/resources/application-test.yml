@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:54320/naeil_bank_test}
+    username: ${SPRING_DATASOURCE_USERNAME:naeil}
+    password: ${SPRING_DATASOURCE_PASSWORD:naeil_test_fixture}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:test-jwt-secret-fixture-32-bytes-minimum}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+kakao:
+  client-id: ${KAKAO_CLIENT_ID:test-kakao-client-id}
+  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost/test}
+  client-secret: ${KAKAO_CLIENT_SECRET:test-kakao-client-secret}
+
+openai:
+  api-key: ${OPENAI_API_KEY:test-openai-api-key-fixture}
+  meal-model: ${OPENAI_MEAL_MODEL:gpt-5-mini}
+  face-model: ${OPENAI_FACE_MODEL:gpt-5-mini}
+  timeout: ${OPENAI_TIMEOUT:30s}
+
+web-push:
+  vapid:
+    public-key: ${VAPID_PUBLIC_KEY:test-vapid-public-key-fixture}
+    private-key: ${VAPID_PRIVATE_KEY:test-vapid-private-key-fixture}
+    subject: ${VAPID_SUBJECT:mailto:test@example.com}

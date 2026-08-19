@@ -5,3 +5,49 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+
+app:
+  jwt:
+    secret: integration-jwt-secret-fixture-32-bytes-minimum
+    access-token-ttl: 30m
+    refresh-token-ttl: 14d
+  cors:
+    allow-credentials: true
+    allowed-origins:
+      - http://localhost:5173
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - Authorization
+      - Content-Type
+    exposed-headers:
+      - Location
+  scheduling:
+    morning-statement-cron: "0 0 8 * * *"
+  upload:
+    max-input-size: 10MB
+    max-generated-size: 20MB
+  timezone:
+    default-zone: Asia/Seoul
+
+kakao:
+  client-id: integration
+  redirect-uri: http://localhost/test
+  client-secret: integration
+
+openai:
+  api-key: integration-openai-api-key-fixture
+  meal-model: gpt-5-mini
+  face-model: gpt-5-mini
+  timeout: 30s
+
+web-push:
+  vapid:
+    public-key: integration-vapid-public-key-fixture
+    private-key: integration-vapid-private-key-fixture
+    subject: mailto:integration@example.com

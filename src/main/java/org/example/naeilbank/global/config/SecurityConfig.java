@@ -2,6 +2,7 @@ package org.example.naeilbank.global.config;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.example.naeilbank.global.config.properties.CorsProperties;
 import org.example.naeilbank.global.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,15 +22,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CorsProperties corsProperties;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -42,6 +41,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 사전 요청 허용
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()             // 로그인, 회원가입 허용
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
@@ -65,16 +65,15 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // CORS 세부 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // 프론트엔드 주소 허용 (React/Vite 기본 포트 등)
-        config.setAllowedOrigins(List.of("*"));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        config.setAllowCredentials(true);
+        config.setAllowedOrigins(corsProperties.allowedOrigins());
+        config.setAllowedMethods(corsProperties.allowedMethods());
+        config.setAllowedHeaders(corsProperties.allowedHeaders());
+        config.setExposedHeaders(corsProperties.exposedHeaders());
+        config.setAllowCredentials(corsProperties.allowCredentials());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

@@ -2,7 +2,8 @@ package org.example.naeilbank.global.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import org.example.naeilbank.global.config.properties.KakaoProperties;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -11,18 +12,11 @@ import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
+@RequiredArgsConstructor
 public class KakaoOAuthService {
 
-    @Value("${kakao.client-id}")
-    private String clientId;
+    private final KakaoProperties kakaoProperties;
 
-    @Value("${kakao.redirect-uri}")
-    private String redirectUri;
-
-    @Value("${kakao.client-secret}")
-    private String clientSecret; // 🔥 Client Secret 주입
-
-    // 1. 인가 코드로 카카오 Access Token 발급
     public String getKakaoAccessToken(String code) {
         RestTemplate rt = new RestTemplate();
 
@@ -31,10 +25,10 @@ public class KakaoOAuthService {
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
-        params.add("client_id", clientId);
-        params.add("redirect_uri", redirectUri);
+        params.add("client_id", kakaoProperties.clientId());
+        params.add("redirect_uri", kakaoProperties.redirectUri());
         params.add("code", code);
-        params.add("client_secret", clientSecret); // 🔥 카카오로 client_secret 추가 전송!
+        params.add("client_secret", kakaoProperties.clientSecret());
 
         HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(params, headers);
 
@@ -51,15 +45,12 @@ public class KakaoOAuthService {
             return jsonNode.get("access_token").asText();
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("카카오 토큰 에러 상태코드: " + e.getStatusCode());
-            System.err.println("카카오 토큰 에러 본문: " + e.getResponseBodyAsString());
-            throw new RuntimeException("카카오 Access Token 발급 실패: " + e.getResponseBodyAsString(), e);
+            throw new RuntimeException("카카오 Access Token 발급 실패: " + e.getStatusCode(), e);
         } catch (Exception e) {
             throw new RuntimeException("카카오 Access Token 발급 중 알 수 없는 에러", e);
         }
     }
 
-    // 2. 카카오 Access Token으로 사용자 프로필 조회
     public KakaoUserInfo getKakaoUserInfo(String accessToken) {
         RestTemplate rt = new RestTemplate();
 
@@ -99,8 +90,7 @@ public class KakaoOAuthService {
             return new KakaoUserInfo(id, email, nickname);
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("카카오 유저정보 에러 본문: " + e.getResponseBodyAsString());
-            throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getResponseBodyAsString(), e);
+            throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getStatusCode(), e);
         } catch (Exception e) {
             throw new RuntimeException("카카오 사용자 정보 조회 중 알 수 없는 에러", e);
         }
