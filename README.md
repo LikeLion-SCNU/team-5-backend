@@ -1,12 +1,12 @@
 <div align="center">
 
-# 🦁 [팀명] - Backend
+# 🦁 되는코드입니다. - Backend
 
-### 멋쟁이사자처럼 순천대학교 14기 - [프로젝트명]
+### 멋쟁이사자처럼 순천대학교 14기 - 내일은행
 
 [![Status](https://img.shields.io/badge/상태-개발중-FF7F00?style=flat-square)]()
 [![LikeLion](https://img.shields.io/badge/LikeLion--SCNU-14기-FF7F00?style=flat-square)]()
-[![Frontend](https://img.shields.io/badge/Frontend-Repo-green?style=flat-square)](https://github.com/LikeLion-SCNU/team-N-frontend)
+[![Frontend](https://img.shields.io/badge/Frontend-Repo-green?style=flat-square)](https://github.com/LikeLion-SCNU/team-5-frontend)
 
 </div>
 
@@ -14,145 +14,59 @@
 
 ## 📌 프로젝트 소개
 
-> 한 줄로 프로젝트를 설명해주세요.
+> **내일은행** — 매일의 습관을 논문 근거 기반 '수명 시간'으로 환산해 은행 잔고처럼 보여주는 AI 웰니스 뱅크
 
-<!-- 프로젝트에 대한 자세한 설명을 작성해주세요 -->
+점수·뱃지 대신 **수명 시간이라는 진짜 화폐**로 습관의 대가를 보여줍니다.
+"오늘 당신 인생에 +2시간 14분이 입금되었습니다."
 
-## 👥 팀원
+### 핵심 기능
+- 🧾 **수명 입출금 명세서** — 수면·활동·스크린타임·식사를 시간으로 환산, 매일 아침 명세서 발송
+- 📷 **식사 사진 분개** — 사진 한 장으로 AI가 음식·음주를 인식해 원장에 기록
+- 📚 **논문 출처 태그** — 모든 환산 수치에 근거 논문(BMJ microlife 등) 연결
+- 👴 **5년 후 얼굴 시뮬레이션** — 현재 추세 vs 개선 시나리오 비교 생성
+- 🛡️ **보호 모드** — 손실 표현을 회복 중심으로 전환하는 안전 가드
 
-| 이름 | 역할 | GitHub |
-|:---:|:---:|:---:|
-| 홍길동 | ⚙️ 백엔드 | [@github](https://github.com/) |
-| 김철수 | ⚙️ 백엔드 | [@github](https://github.com/) |
-| 이영희 | ⚙️ 백엔드 | [@github](https://github.com/) |
+## 🛠 기술 스택
 
-## 🛠️ 기술 스택
+| 구분 | 기술 |
+|---|---|
+| Framework | FastAPI (Python 3.12) |
+| Database | PostgreSQL 16 — 원장(append-only) 패턴, 14테이블 |
+| Auth | JWT (액세스 30분 / 리프레시 14일) + 카카오 OAuth |
+| Infra | Gabia Cloud, Docker Compose, GitHub Actions CI/CD |
+| AI | Gemini API (식사 사진 분석), 이미지 생성 API (얼굴 시뮬레이션) |
 
-<!-- 사용하는 기술에 [x] 체크해주세요. 목록에 없으면 직접 추가해도 됩니다! -->
+## 🚀 배포 (자동)
 
-**Framework**
+**push만 하면 배포됩니다.** 자세한 내용은 [docs/DEPLOY.md](docs/DEPLOY.md)
 
-- [ ] ![Django](https://img.shields.io/badge/Django-092E20?style=flat-square&logo=django&logoColor=white)
-- [ ] ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-- [ ] ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=flat-square&logo=springboot&logoColor=white)
-- [ ] ![Express](https://img.shields.io/badge/Express-000000?style=flat-square&logo=express&logoColor=white)
+| 브랜치 | 환경 | API 주소 | DB |
+|---|---|---|---|
+| `develop` | 개발 | http://1.201.116.27:8001 | naeil_bank_dev |
+| `main` | 운영(심사) | https://1.201.116.27.nip.io/api | naeil_bank |
 
-**Language**
+### 브랜치 규칙
+1. 작업은 `develop`에서 (또는 feature 브랜치 → develop PR)
+2. **`main` 직접 push 금지** — develop → main PR로만
+3. main 머지 = 심사용 서버 반영이므로 develop에서 확인 후 머지
 
-- [ ] ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
-- [ ] ![Java](https://img.shields.io/badge/Java-007396?style=flat-square&logo=openjdk&logoColor=white)
-- [ ] ![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white)
-
-**Database**
-
-- [ ] ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white)
-- [ ] ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
-- [ ] ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
-- [ ] ![Redis](https://img.shields.io/badge/Redis-DC382D?style=flat-square&logo=redis&logoColor=white)
-- [ ] ![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
-
-**인프라 & 배포**
-
-- [ ] ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
-- [ ] ![AWS](https://img.shields.io/badge/AWS-232F3E?style=flat-square&logo=amazonwebservices&logoColor=white)
-- [ ] ![Nginx](https://img.shields.io/badge/Nginx-009639?style=flat-square&logo=nginx&logoColor=white)
-- [ ] ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)
-
-**협업 도구**
-
-- [ ] ![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)
-- [ ] ![Notion](https://img.shields.io/badge/Notion-000000?style=flat-square&logo=notion&logoColor=white)
-- [ ] ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black)
-
-## 📂 프로젝트 구조
-
-```
-📦 backend
-├── 📁 config/               ← 설정 파일
-├── 📁 apps/                 ← 앱 모듈
-│   ├── 📁 users/            ← 사용자 관련
-│   ├── 📁 posts/            ← 게시글 관련 (예시)
-│   └── ...
-├── 📁 docs/                 ← API 문서, 기획서 등
-├── .env.example
-├── requirements.txt         ← Python 의존성
-├── manage.py
-└── README.md
-```
-
-## 🚀 실행 방법
+## 🏁 시작하기 (로컬)
 
 ```bash
-# 프로젝트 클론
-git clone https://github.com/LikeLion-SCNU/team-N-backend.git
-
-# 가상환경 생성 및 활성화
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-
-# 의존성 설치
 pip install -r requirements.txt
-
-# 환경변수 설정
-cp .env.example .env
-# .env 파일에 DB, 시크릿키 등 입력
-
-# DB 마이그레이션
-python manage.py migrate
-
-# 서버 실행
-python manage.py runserver
+uvicorn main:app --reload   # http://localhost:8000/docs
 ```
 
-## 📡 API 명세
+- 현재 `main.py`는 파이프라인 검증용 플레이스홀더 — 실제 구현으로 교체하세요 (Dockerfile 진입점 `uvicorn main:app` 유지 또는 CMD 수정)
+- 서버 DB 접속: 배포 환경에서 `DATABASE_URL` 환경변수 자동 주입 (`naeil-db:5432`)
+- DB 스키마(14테이블)는 서버에 적용 완료 — 원장 테이블(`ledger_entries`)은 **append-only** (UPDATE/DELETE 트리거 차단), 잔고·명세서 조회는 반드시 `v_daily_net`/`v_balance` 뷰 사용
 
-| Method | Endpoint | 설명 |
-|:---:|:---|:---|
-| GET | `/api/v1/` | API 목록 |
-| | | |
-| | | |
+## 👥 Team 되는코드입니다.
 
-> 💡 자세한 API 문서는 서버 실행 후 `/docs` 또는 `/swagger`에서 확인 가능 (FastAPI/DRF 기준)
-
-## 🌿 브랜치 전략
-
-| 브랜치 | 용도 |
-|:---:|:---|
-| `main` | 배포용 (항상 안정된 코드) |
-| `develop` | 개발 통합 브랜치 (PR은 여기로) |
-| `feat/기능명` | 기능 개발 (예: `feat/user-auth`, `feat/api-orders`) |
-| `fix/버그명` | 버그 수정 (예: `fix/db-connection`) |
-
-### 작업 흐름
-
-```
-1. develop에서 새 브랜치 생성  →  git checkout -b feat/user-auth develop
-2. 작업 후 커밋                →  git add . && git commit -m "feat: 사용자 인증 API 구현"
-3. develop으로 PR 생성         →  GitHub에서 PR 생성
-4. 코드 리뷰 후 머지           →  PM이 확인 후 머지
-5. 배포 시 main으로 머지       →  develop → main
-```
-
-## 📅 개발 일정
-
-| 주차 | 기간 | 내용 |
-|:---:|:---:|:---|
-| 1주차 | MM/DD ~ MM/DD | 기획 및 DB 설계 |
-| 2-3주차 | MM/DD ~ MM/DD | 핵심 API 개발 |
-| 4-5주차 | MM/DD ~ MM/DD | 프론트 연동 및 고도화 |
-| 6주차 | MM/DD ~ MM/DD | 테스트 및 배포 |
-
-## 📎 관련 자료
-
-- [기획서]()
-- [API 명세서]()
-- [DB ERD]()
-- [Frontend Repo](https://github.com/LikeLion-SCNU/team-N-frontend)
-
----
-
-<div align="center">
-
-**🦁 멋쟁이사자처럼 순천대학교 14기 🦁**
-
-</div>
+| 이름 | 역할 | GitHub |
+|---|---|---|
+| 박현빈 | PM · 인프라 | [@Hbin77](https://github.com/Hbin77) |
+| 허찬 |  |  |
+| 김민수 |  |  |
+| 서예슬 |  |  |
+| 지뇨쎄 |  |  |
