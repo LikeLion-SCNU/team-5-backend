@@ -1,0 +1,38 @@
+name: Deploy to Gabia
+on:
+  push:
+    branches: [main, develop]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set env by branch
+        id: cfg
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "dir=backend-prod" >> $GITHUB_OUTPUT
+            echo "port=8000" >> $GITHUB_OUTPUT
+            echo "db=naeil_bank" >> $GITHUB_OUTPUT
+          else
+            echo "dir=backend-dev" >> $GITHUB_OUTPUT
+            echo "port=8001" >> $GITHUB_OUTPUT
+            echo "db=naeil_bank_dev" >> $GITHUB_OUTPUT
+          fi
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      - name: Sync code to server
+        run: |
+          rsync -az --delete --exclude .git \
+            ./ ubuntu@${{ secrets.SERVER_HOST }}:/home/ubuntu/apps/${{ steps.cfg.outputs.dir }}/
+      - name: Build & up
+        run: |
+          ssh ubuntu@${{ secrets.SERVER_HOST }} \
+            "cd /home/ubuntu/apps/${{ steps.cfg.outputs.dir }} && \
+             APP_PORT=${{ steps.cfg.outputs.port }} DB_NAME=${{ steps.cfg.outputs.db }} \
+             docker compose --env-file /home/ubuntu/app/.env -p ${{ steps.cfg.outputs.dir }} up -d --build && \
+             docker image prune -f"
