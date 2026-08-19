@@ -1,0 +1,26 @@
+# Server Port
+server:
+    port: 8080
+
+# Database & JPA Settings
+spring:
+    datasource:
+        driver-class-name: org.postgresql.Driver
+        url: jdbc:postgresql://localhost:5432/tomorrowbank_db
+        username: postgres
+        password: '1234'
+
+    jpa:
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+        hibernate:
+            ddl-auto: create
+        show-sql: true
+        properties:
+            hibernate:
+                format_sql: true
+
+# Kakao OAuth Settings
+kakao:
+    client-id: dummy
+    redirect-uri: dummy
+    client-secret: dummy
