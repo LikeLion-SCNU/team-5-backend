@@ -79,6 +79,12 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+      - name: Enforce schema contract verdict
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          grep -qx 'assertions=pass' .omo/evidence/schema-contract/schema-contract-verdict.txt
+
       - name: Cleanup runner credentials
         if: always()
         shell: bash

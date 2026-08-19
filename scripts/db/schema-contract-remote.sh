@@ -123,7 +123,7 @@ rm -f "$temp_dir/password"
 chmod 600 "$pgpass_path"
 
 run_postgres_tool() {
-  timeout "$SCHEMA_CONTRACT_TIMEOUT_SECONDS" docker run --rm --network "$DOCKER_NETWORK" \
+  timeout "$SCHEMA_CONTRACT_TIMEOUT_SECONDS" docker run --rm -i --network "$DOCKER_NETWORK" \
     --mount "type=bind,src=$pgpass_path,dst=/tmp/schema-contract.pgpass,readonly" \
     -e PGPASSFILE=/tmp/schema-contract.pgpass \
     -e PGCONNECT_TIMEOUT=5 \
