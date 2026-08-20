@@ -194,6 +194,49 @@ class MealApiIntegrationTest {
     }
 
     @Test
+    void reusingTheSamePhotoAfterConfirmStartsANewMeal() throws Exception {
+        UUID userId = user("meal-reupload");
+        grant(userId, "MEAL_AI");
+        UUID mediaId = media(userId, 'r');
+        rule("food", "per_serving", 18);
+        when(mealAnalysisClient.analyze(eq("image/png"), any())).thenReturn(analysis("사과"));
+
+        UUID firstMealId = createMeal(userId, mediaId);
+        mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", firstMealId)
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("confirmed"));
+        assertThat(count("ledger_entries", userId)).isOne();
+
+        // 같은 사진을 다시 올리면 미디어는 중복 제거되지만, 확정된 기록을 돌려주면 안 된다.
+        UUID secondMealId = createMeal(userId, mediaId);
+
+        assertThat(secondMealId).isNotEqualTo(firstMealId);
+        mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", secondMealId)
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("confirmed"));
+        assertThat(count("ledger_entries", userId)).isEqualTo(2);
+    }
+
+    private UUID createMeal(UUID userId, UUID mediaId) throws Exception {
+        String created = mockMvc.perform(post("/api/v1/meals")
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"media_blob_id":"%s","record_date":"%s"}
+                                """.formatted(mediaId, LocalDate.of(2026, 8, 20))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return UUID.fromString(com.fasterxml.jackson.databind.json.JsonMapper.builder()
+                .build().readTree(created).get("id").asText());
+    }
+
+    @Test
     void genericFoodDoesNotReceiveLongevityCredit() throws Exception {
         UUID userId = user("meal-neutral-food");
         grant(userId, "MEAL_AI");

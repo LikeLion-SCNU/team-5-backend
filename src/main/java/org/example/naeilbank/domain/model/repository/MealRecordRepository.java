@@ -27,4 +27,22 @@ public interface MealRecordRepository extends JpaRepository<MealRecord, UUID> {
             @Param("userId") UUID userId,
             @Param("mediaBlobId") UUID mediaBlobId
     );
+
+    /**
+     * 같은 사진으로 아직 확정하지 않은 기록만 찾는다.
+     *
+     * 확정·제외까지 끝난 기록을 재사용하면, 같은 음식을 다시 먹어 올렸을 때
+     * 지난 기록이 그대로 돌아와 새 등록이 되지 않는다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from MealRecord m"
+            + " where m.userId = :userId"
+            + " and m.mediaBlobId = :mediaBlobId"
+            + " and m.status in (org.example.naeilbank.entity.MealStatus.analyzing,"
+            + " org.example.naeilbank.entity.MealStatus.pending_confirm)"
+            + " order by m.createdAt desc")
+    List<MealRecord> findUnconfirmedByUserIdAndMediaBlobIdForUpdate(
+            @Param("userId") UUID userId,
+            @Param("mediaBlobId") UUID mediaBlobId
+    );
 }
