@@ -190,6 +190,35 @@ class MealApiIntegrationTest {
         assertThat(count("ledger_entries", userId)).isZero();
     }
 
+    @Test
+    void genericFoodDoesNotReceiveLongevityCredit() throws Exception {
+        UUID userId = user("meal-neutral-food");
+        grant(userId, "MEAL_AI");
+        UUID mediaId = media(userId, 'b');
+        rule("food", "per_serving", 24);
+        when(mealAnalysisClient.analyze(eq("image/png"), any())).thenReturn(analysis("rice"));
+
+        String created = mockMvc.perform(post("/api/v1/meals")
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"media_blob_id":"%s","record_date":"2026-08-20"}
+                                """.formatted(mediaId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        UUID mealId = UUID.fromString(com.fasterxml.jackson.databind.json.JsonMapper.builder()
+                .build().readTree(created).get("id").asText());
+
+        mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", mealId)
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk());
+
+        assertThat(count("ledger_entries", userId)).isZero();
+        assertThat(count("conversion_postings", userId)).isZero();
+    }
+
     private Void confirm(UUID userId, UUID mealId, CountDownLatch start) throws Exception {
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
         mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", mealId)

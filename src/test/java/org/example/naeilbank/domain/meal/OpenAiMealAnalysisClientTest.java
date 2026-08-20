@@ -48,7 +48,7 @@ class OpenAiMealAnalysisClientTest {
         server.enqueue(new MockResponse()
                 .setHeader("Content-Type", "application/json")
                 .setBody("""
-                        {"output":[{"content":[{"type":"output_text","text":"{\\"items\\":[{\\"food_name\\":\\"rice\\",\\"portion\\":\\"1 bowl\\",\\"category\\":\\"FOOD\\",\\"unit\\":\\"PER_SERVING\\",\\"value\\":1}]}"}]}]}
+                        {"output":[{"content":[{"type":"output_text","text":"{\\"items\\":[{\\"food_name\\":\\"spinach\\",\\"portion\\":\\"1 serving\\",\\"category\\":\\"FOOD\\",\\"unit\\":\\"PER_SERVING\\",\\"value\\":1,\\"eligibility\\":\\"FRUIT_OR_VEGETABLE\\"}]}"}]}]}
                         """));
 
         MealAnalysisContract.AnalyzedMeal meal = client.analyze("image/png", new byte[]{1, 2, 3});
@@ -56,10 +56,12 @@ class OpenAiMealAnalysisClientTest {
         assertThat(meal.items()).hasSize(1);
         assertThat(meal.items().getFirst().category()).isEqualTo(HabitCategory.FOOD);
         assertThat(meal.items().getFirst().unit()).isEqualTo(ConversionUnit.PER_SERVING);
+        assertThat(meal.items().getFirst().eligibility()).isEqualTo(MealEligibility.FRUIT_OR_VEGETABLE);
         String requestBody = server.takeRequest().getBody().readUtf8();
         assertThat(requestBody)
                 .contains("\"strict\":true")
                 .contains("\"json_schema\"")
+                .contains("FRUIT_OR_VEGETABLE")
                 .contains("\"image_url\":\"data:image/png;base64,AQID\"");
     }
 
@@ -68,7 +70,7 @@ class OpenAiMealAnalysisClientTest {
         server.enqueue(new MockResponse()
                 .setHeader("Content-Type", "application/json")
                 .setBody("""
-                        {"output_text":"{\\"items\\":[{\\"food_name\\":\\"rice\\",\\"portion\\":\\"1 bowl\\",\\"category\\":\\"FOOD\\",\\"unit\\":\\"PER_DRINK\\",\\"value\\":1,\\"extra\\":true}]}"}
+                        {"output_text":"{\\"items\\":[{\\"food_name\\":\\"rice\\",\\"portion\\":\\"1 bowl\\",\\"category\\":\\"FOOD\\",\\"unit\\":\\"PER_DRINK\\",\\"value\\":1,\\"eligibility\\":\\"NEUTRAL\\",\\"extra\\":true}]}"}
                         """));
 
         assertThatThrownBy(() -> client.analyze("image/png", new byte[]{1}))

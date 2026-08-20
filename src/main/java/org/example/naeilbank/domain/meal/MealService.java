@@ -31,6 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -40,6 +41,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class MealService {
+    private static final BigDecimal MAX_DAILY_FOOD_SERVINGS = new BigDecimal("5");
+    private static final BigDecimal DAILY_NEUTRAL_ALCOHOL_SERVINGS = BigDecimal.ONE;
+    private static final BigDecimal MAX_DAILY_PENALIZED_ALCOHOL_SERVINGS = new BigDecimal("6");
+
     private final MealRecordRepository mealRecordRepository;
     private final MealItemRepository mealItemRepository;
     private final UserRepository userRepository;
@@ -113,22 +118,73 @@ public class MealService {
             return view(record);
         }
 
+        DailyMealConsumption consumption = dailyConsumption(userId, record);
+        BigDecimal remainingFoodServings = MAX_DAILY_FOOD_SERVINGS
+                .subtract(consumption.foodServings()).max(BigDecimal.ZERO);
+        BigDecimal remainingNeutralAlcoholServings = DAILY_NEUTRAL_ALCOHOL_SERVINGS
+                .subtract(consumption.alcoholServings()).max(BigDecimal.ZERO);
+        BigDecimal priorPenalizedAlcoholServings = consumption.alcoholServings()
+                .subtract(DAILY_NEUTRAL_ALCOHOL_SERVINGS).max(BigDecimal.ZERO);
+        BigDecimal remainingPenalizedAlcoholServings = MAX_DAILY_PENALIZED_ALCOHOL_SERVINGS
+                .subtract(priorPenalizedAlcoholServings).max(BigDecimal.ZERO);
         record.confirm(Instant.now(clock));
         mealRecordRepository.saveAndFlush(record);
         for (MealItem item : activeItems) {
             MealItemPayloadCodec.StoredPortion portion = payloadCodec.decode(item.getPortion());
+            BigDecimal conversionValue;
+            if (portion.category() == org.example.naeilbank.domain.conversion.HabitCategory.FOOD) {
+                if (!portion.qualifiesForFoodCredit() || remainingFoodServings.signum() <= 0) {
+                    continue;
+                }
+                conversionValue = portion.value().min(remainingFoodServings);
+                remainingFoodServings = remainingFoodServings.subtract(conversionValue);
+            } else {
+                BigDecimal neutralServings = portion.value().min(remainingNeutralAlcoholServings);
+                remainingNeutralAlcoholServings = remainingNeutralAlcoholServings.subtract(neutralServings);
+                conversionValue = portion.value().subtract(neutralServings)
+                        .min(remainingPenalizedAlcoholServings);
+                if (conversionValue.signum() == 0) {
+                    continue;
+                }
+                remainingPenalizedAlcoholServings = remainingPenalizedAlcoholServings.subtract(conversionValue);
+            }
             ConversionReceipt receipt = conversionService.convert(userId, new ConversionCommand(
                     item.getId(),
                     ConversionSourceType.MEAL_ITEM,
                     portion.category(),
                     portion.unit(),
-                    portion.value(),
+                    conversionValue,
                     record.getRecordDate()
             ));
+            if (portion.category() == org.example.naeilbank.domain.conversion.HabitCategory.ALCOHOL
+                    && receipt.postedSeconds() > 0) {
+                throw new AuthException(ErrorCode.CONVERSION_RULE_UNAVAILABLE);
+            }
             item.assignRule(receipt.ruleId());
         }
         mealItemRepository.saveAllAndFlush(activeItems);
         return view(record);
+    }
+
+    private DailyMealConsumption dailyConsumption(UUID userId, MealRecord record) {
+        List<MealItemPayloadCodec.StoredPortion> confirmed = mealItemRepository.findOwnedActiveItemsForDate(
+                        userId, record.getRecordDate(), MealStatus.confirmed).stream()
+                .map(MealItem::getPortion)
+                .map(payloadCodec::decode)
+                .toList();
+        BigDecimal foodServings = confirmed.stream()
+                .filter(MealItemPayloadCodec.StoredPortion::qualifiesForFoodCredit)
+                .map(MealItemPayloadCodec.StoredPortion::value)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal alcoholServings = confirmed.stream()
+                .filter(portion -> portion.category()
+                        == org.example.naeilbank.domain.conversion.HabitCategory.ALCOHOL)
+                .map(MealItemPayloadCodec.StoredPortion::value)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new DailyMealConsumption(foodServings, alcoholServings);
+    }
+
+    private record DailyMealConsumption(BigDecimal foodServings, BigDecimal alcoholServings) {
     }
 
     @Transactional

@@ -47,6 +47,13 @@ public final class MealAnalysisContract {
             if (item.category() == HabitCategory.ALCOHOL && item.unit() != ConversionUnit.PER_DRINK) {
                 throw new AuthException(ErrorCode.INVALID_MEAL_ANALYSIS);
             }
+            if (item.eligibility() == null
+                    || item.category() == HabitCategory.ALCOHOL
+                    && item.eligibility() != MealEligibility.NEUTRAL
+                    || item.category() != HabitCategory.FOOD
+                    && item.category() != HabitCategory.ALCOHOL) {
+                throw new AuthException(ErrorCode.INVALID_MEAL_ANALYSIS);
+            }
         }
     }
 
@@ -60,7 +67,8 @@ public final class MealAnalysisContract {
             String portion,
             HabitCategory category,
             ConversionUnit unit,
-            BigDecimal value
+            BigDecimal value,
+            MealEligibility eligibility
     ) {
     }
 }
