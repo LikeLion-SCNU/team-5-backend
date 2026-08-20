@@ -30,7 +30,7 @@ class CompleteDomainSchemaIntegrationTest {
     );
 
     private static final Set<String> LATEST_TABLES = Set.of(
-            "audit_events", "balance_view_events", "consents", "conversion_rules",
+            "audit_events", "balance_view_events", "consents", "conversion_postings", "conversion_rules",
             "deletion_logs", "deletion_requests", "face_simulation_outputs", "face_simulations",
             "health_daily", "ledger_entries", "media_blobs", "meal_items", "meal_records",
             "notification_attempts", "notification_logs", "notification_preferences", "outbox_jobs",

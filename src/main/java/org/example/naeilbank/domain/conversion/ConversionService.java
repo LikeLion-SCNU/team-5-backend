@@ -115,6 +115,10 @@ public class ConversionService {
         List<ConversionRule> rules = ruleRepository.findActiveForConversion(
                 command.category().persistedValue(), command.unit().persistedValue());
         if (rules.isEmpty()) {
+            rules = ruleRepository.findActiveForConversion(
+                    command.category().persistedValue(), command.unit().persistedValue());
+        }
+        if (rules.isEmpty()) {
             throw new AuthException(ErrorCode.CONVERSION_RULE_UNAVAILABLE);
         }
         if (rules.size() != 1) {

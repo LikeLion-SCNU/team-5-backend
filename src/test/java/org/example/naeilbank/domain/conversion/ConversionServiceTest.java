@@ -35,6 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -83,8 +84,28 @@ class ConversionServiceTest {
     }
 
     @Test
+    void activeRuleTurnoverRetriesOneFreshSnapshotBeforeFailingClosed() {
+        Source source = source(true);
+        ConversionRule replacement = rule(source.getId(), true, "{}");
+        when(ruleRepository.findActiveForConversion(ConversionRule.HabitType.activity,
+                "per_1000_steps")).thenReturn(List.of(), List.of(replacement));
+        when(sourceRepository.findByIdAndActiveTrueForShare(source.getId())).thenReturn(Optional.of(source));
+        LedgerEntry savedLedger = mock(LedgerEntry.class);
+        when(savedLedger.getId()).thenReturn(42L);
+        when(ledgerRepository.saveAndFlush(any())).thenReturn(savedLedger);
+        when(postingRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var receipt = service.convert(userId, command());
+
+        assertThat(receipt.ruleId()).isEqualTo(replacement.getId());
+        verify(ruleRepository, times(2)).findActiveForConversion(
+                ConversionRule.HabitType.activity, "per_1000_steps");
+    }
+
+    @Test
     void missingAmbiguousInactiveAndConditionalRulesWriteNothing() {
         when(ruleRepository.findActiveForConversion(any(), any()))
+                .thenReturn(List.of())
                 .thenReturn(List.of())
                 .thenReturn(List.of(rule(UUID.randomUUID(), true, "{}"),
                         rule(UUID.randomUUID(), true, "{}")))
