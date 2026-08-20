@@ -98,7 +98,7 @@ class HealthApiIntegrationTest {
         grant(userId, "HEALTH_COLLECTION");
 
         upsert(userId, """
-                {"record_date":"2026-08-23","screen_minutes":90}
+                {"record_date":"2026-08-14","screen_minutes":90}
                 """).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_HEALTH_DATA"));
 
@@ -141,17 +141,17 @@ class HealthApiIntegrationTest {
         rule("activity", "per_minute", 7);
 
         upsert(owner, """
-                {"record_date":"2026-08-22","steps":1000}
+                {"record_date":"2026-08-13","steps":1000}
                 """).andExpect(status().isOk());
         upsert(other, """
-                {"record_date":"2026-08-22","steps":2000}
+                {"record_date":"2026-08-13","steps":2000}
                 """).andExpect(status().isOk());
 
         assertThat(jdbc.queryForObject("""
-                select steps from health_daily where user_id = ? and record_date = date '2026-08-22'
+                select steps from health_daily where user_id = ? and record_date = date '2026-08-13'
                 """, Integer.class, owner)).isEqualTo(1000);
         assertThat(jdbc.queryForObject("""
-                select steps from health_daily where user_id = ? and record_date = date '2026-08-22'
+                select steps from health_daily where user_id = ? and record_date = date '2026-08-13'
                 """, Integer.class, other)).isEqualTo(2000);
     }
 

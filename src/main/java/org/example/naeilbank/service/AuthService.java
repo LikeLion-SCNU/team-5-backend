@@ -42,12 +42,15 @@ public class AuthService {
 
     @Transactional
     public JoinResponse join(JoinRequest joinRequest) {
-        if (userRepository.existsByEmail(joinRequest.email())) {
+        if (userRepository.existsByEmailIgnoreCase(joinRequest.email())) {
             throw new AuthException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         String encodedPassword = passwordEncoder.encode(joinRequest.password());
-        User user = User.local(joinRequest.email(), encodedPassword, joinRequest.name().trim());
+        User user = User.local(
+                joinRequest.email().trim().toLowerCase(java.util.Locale.ROOT),
+                encodedPassword,
+                joinRequest.name().trim());
         boolean verificationRequired = emailVerificationService.isEnabled();
         if (verificationRequired) {
             emailVerificationService.issueAndSend(user);
@@ -67,7 +70,7 @@ public class AuthService {
 
     @Transactional
     public VerifyEmailResponse verifyEmail(VerifyEmailRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailIgnoreCase(request.email())
                 .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
         emailVerificationService.verify(user, request.code());
         return new VerifyEmailResponse(true, "이메일 인증이 완료되었습니다.");
@@ -75,7 +78,7 @@ public class AuthService {
 
     @Transactional
     public VerifyEmailResponse resendVerification(ResendVerificationRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailIgnoreCase(request.email())
                 .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
         if (user.isEmailVerified()) {
             return new VerifyEmailResponse(true, "이미 인증된 계정입니다. 로그인해주세요.");
@@ -86,7 +89,7 @@ public class AuthService {
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        Optional<User> found = userRepository.findByEmail(request.email())
+        Optional<User> found = userRepository.findByEmailIgnoreCase(request.email())
                 .filter(candidate -> candidate.getPassword() != null);
         // 계정이 없어도 해시 비교 비용을 동일하게 치러 응답 시간으로 가입 여부가 드러나지 않게 한다.
         boolean matches = passwordEncoder.matches(request.password(),

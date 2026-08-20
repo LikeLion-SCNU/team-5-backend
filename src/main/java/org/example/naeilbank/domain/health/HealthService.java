@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -35,9 +38,13 @@ public class HealthService {
     private static final int DAILY_MINUTES_LIMIT = 24 * 60;
     /** 명백한 오염 입력만 거르는 하루 걸음 상한 */
     private static final int DAILY_STEPS_LIMIT = 200_000;
+    /** 잔고와 명세서가 어긋나지 않도록 기록 날짜를 KST 기준 최근 구간으로 제한한다. */
+    private static final ZoneId RECORD_ZONE = ZoneId.of("Asia/Seoul");
+    private static final int RECORD_BACKFILL_DAYS = 365;
     private static final BigDecimal MINUTES_PER_HOUR = new BigDecimal("60");
     private static final int INPUT_SCALE = 12;
 
+    private final Clock clock;
     private final HealthDailyRepository healthDailyRepository;
     private final UserRepository userRepository;
     private final ConsentGuard consentGuard;
@@ -96,12 +103,28 @@ public class HealthService {
                 && request.moderateActivityMinutes() == null && request.screenMinutes() == null) {
             throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
         }
+        requireRecordDate(request.recordDate());
         requireNonNegative(request.sleepMinutes());
-        requireNonNegative(request.steps());
+        requireDailySteps(request.steps());
         requireDailyMinutes(request.sleepMinutes());
         requireDailyMinutes(request.moderateActivityMinutes());
         requireDailyMinutes(request.screenMinutes());
         requireScreenMetric(request.screenMinutes(), request.screenMetric());
+    }
+
+    private void requireRecordDate(LocalDate recordDate) {
+        LocalDate today = LocalDate.now(clock.withZone(RECORD_ZONE));
+        if (recordDate == null
+                || recordDate.isAfter(today)
+                || recordDate.isBefore(today.minusDays(RECORD_BACKFILL_DAYS))) {
+            throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
+        }
+    }
+
+    private void requireDailySteps(Integer value) {
+        if (value != null && (value < 0 || value > DAILY_STEPS_LIMIT)) {
+            throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
+        }
     }
 
     private void requireNonNegative(Integer value) {

@@ -75,6 +75,20 @@ class AuthRateLimitFilterTest {
     }
 
     @Test
+    void ignoresForwardedForWithoutAProxyHop() throws Exception {
+        MutableClock clock = new MutableClock(Instant.parse("2026-08-20T00:00:00Z"));
+        AuthRateLimitFilter filter = new AuthRateLimitFilter(
+                new AuthRateLimitProperties(1, Duration.ofMinutes(1), 10),
+                new SecurityErrorResponseWriter(new ObjectMapper()),
+                clock
+        );
+
+        // 프록시를 거치지 않은 요청이 헤더만 붙여도 새 버킷을 만들 수 없다.
+        assertThat(perform(filter, "198.51.100.77", null).getStatus()).isEqualTo(200);
+        assertThat(perform(filter, "198.51.100.77", "203.0.113.1").getStatus()).isEqualTo(429);
+    }
+
+    @Test
     void fallsBackToSocketAddressWithoutProxyHeaders() throws Exception {
         MutableClock clock = new MutableClock(Instant.parse("2026-08-20T00:00:00Z"));
         AuthRateLimitFilter filter = new AuthRateLimitFilter(

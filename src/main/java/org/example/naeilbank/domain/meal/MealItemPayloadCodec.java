@@ -17,6 +17,9 @@ import java.math.BigDecimal;
 
 @Component
 public class MealItemPayloadCodec {
+    /** 직접 입력 항목도 AI 항목과 같은 인분 상한을 따른다. */
+    private static final java.math.BigDecimal MAX_SERVINGS_PER_ITEM = new java.math.BigDecimal("20");
+
     private final ObjectMapper objectMapper;
 
     public MealItemPayloadCodec(ObjectMapper objectMapper) {
@@ -70,7 +73,8 @@ public class MealItemPayloadCodec {
 
     private void validate(HabitCategory category, ConversionUnit unit, BigDecimal value,
                           MealEligibility eligibility) {
-        if (category == null || unit == null || value == null || value.signum() <= 0) {
+        if (category == null || unit == null || value == null || value.signum() <= 0
+                || value.compareTo(MAX_SERVINGS_PER_ITEM) > 0) {
             throw new AuthException(ErrorCode.INVALID_MEAL_REQUEST);
         }
         if (category == HabitCategory.FOOD && unit != ConversionUnit.PER_SERVING) {

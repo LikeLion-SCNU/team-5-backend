@@ -13,6 +13,9 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public final class MealAnalysisContract {
+    /** 한 항목이 가질 수 있는 최대 인분 수 — 모델이 그램을 넣어도 원장이 폭주하지 않도록 막는다. */
+    private static final BigDecimal MAX_SERVINGS_PER_ITEM = new BigDecimal("20");
+
     private static final int MAX_ITEMS = 30;
 
     private MealAnalysisContract() {
@@ -38,7 +41,7 @@ public final class MealAnalysisContract {
             if (item.foodName() == null || item.foodName().isBlank()
                     || item.category() == null || item.unit() == null
                     || item.value() == null || item.value().signum() <= 0
-                    || item.value().compareTo(new BigDecimal("1000")) > 0) {
+                    || item.value().compareTo(MAX_SERVINGS_PER_ITEM) > 0) {
                 throw new AuthException(ErrorCode.INVALID_MEAL_ANALYSIS);
             }
             if (item.category() == HabitCategory.FOOD && item.unit() != ConversionUnit.PER_SERVING) {

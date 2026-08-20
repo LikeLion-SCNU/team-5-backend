@@ -69,11 +69,11 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             return request.getRemoteAddr();
         }
         String[] hops = forwarded.split(",");
-        int index = hops.length - 2;
-        if (index < 0) {
-            index = 0;
+        if (hops.length < 2) {
+            // 프록시가 덧붙인 흔적이 없으면 클라이언트가 직접 붙인 헤더이므로 믿지 않는다.
+            return request.getRemoteAddr();
         }
-        String candidate = hops[index].trim();
+        String candidate = hops[hops.length - 2].trim();
         return candidate.isEmpty() ? request.getRemoteAddr() : candidate;
     }
 
