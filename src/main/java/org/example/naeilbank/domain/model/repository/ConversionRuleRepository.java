@@ -22,9 +22,17 @@ public interface ConversionRuleRepository extends JpaRepository<ConversionRule, 
     @Query("select r from ConversionRule r where r.id = :id")
     Optional<ConversionRule> findByIdForUpdate(@Param("id") UUID id);
 
-    Optional<ConversionRule> findFirstByLogicalKeyOrderByVersionNumberDesc(UUID logicalKey);
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from ConversionRule r where r.logicalKey = :logicalKey and r.active = true")
     List<ConversionRule> findActiveByLogicalKeyForUpdate(@Param("logicalKey") UUID logicalKey);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select r from ConversionRule r
+            where r.logicalKey = (
+                select target.logicalKey from ConversionRule target where target.id = :id
+            )
+            order by r.versionNumber asc
+            """)
+    List<ConversionRule> findFamilyByMemberIdForUpdate(@Param("id") UUID id);
 }

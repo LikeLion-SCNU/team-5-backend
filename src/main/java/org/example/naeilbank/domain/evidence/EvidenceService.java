@@ -16,10 +16,9 @@ import org.example.naeilbank.global.exception.ErrorCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -34,7 +33,7 @@ public class EvidenceService {
 
     @Transactional(readOnly = true)
     public SourceListResponse activeSources() {
-        return new SourceListResponse(sourceRepository.findByActiveTrueOrderByTitleAscVersionNumberDesc()
+        return new SourceListResponse(sourceRepository.findLatestActiveVersions()
                 .stream().map(SourceView::from).toList());
     }
 
@@ -77,11 +76,11 @@ public class EvidenceService {
 
     @Transactional
     public SourceView versionSource(UUID adminId, UUID sourceId, VersionSourceRequest request) {
-        Source previous = lockedSource(sourceId);
+        List<Source> family = lockedSourceFamily(sourceId);
+        Source previous = sourceMember(family, sourceId);
         requireVersion(previous.resourceVersion(), request.expectedVersion());
-        SourceContent content = validated(request.content());
-        int next = sourceRepository.findFirstByLogicalKeyOrderByVersionNumberDesc(previous.getLogicalKey())
-                .map(Source::getVersionNumber).orElse(previous.getVersionNumber()) + 1;
+        SourceContent content = EvidencePolicy.validate(request.content());
+        int next = family.get(family.size() - 1).getVersionNumber() + 1;
         Instant now = Instant.now(clock);
         previous.markVersioned(now);
         sourceRepository.saveAndFlush(previous);
@@ -95,7 +94,7 @@ public class EvidenceService {
 
     @Transactional
     public SourceView activateSource(UUID adminId, UUID sourceId, ActivationRequest request) {
-        Source source = lockedSource(sourceId);
+        Source source = sourceMember(lockedSourceFamily(sourceId), sourceId);
         requireVersion(source.resourceVersion(), request.expectedVersion());
         if (!request.active() && ruleRepository.existsBySourceIdAndActiveTrue(sourceId)) {
             throw new AuthException(ErrorCode.EVIDENCE_SOURCE_IN_USE);
@@ -121,16 +120,16 @@ public class EvidenceService {
 
     @Transactional
     public RuleView versionRule(UUID adminId, UUID ruleId, VersionRuleRequest request) {
-        ConversionRule previous = lockedRule(ruleId);
-        requireVersion(previous.resourceVersion(), request.expectedVersion());
         RuleContent content = validated(request.content());
         requiredActiveSource(content.sourceId());
-        int next = ruleRepository.findFirstByLogicalKeyOrderByVersionNumberDesc(previous.getLogicalKey())
-                .map(ConversionRule::getVersionNumber).orElse(previous.getVersionNumber()) + 1;
+        List<ConversionRule> family = lockedRuleFamily(ruleId);
+        ConversionRule previous = ruleMember(family, ruleId);
+        requireVersion(previous.resourceVersion(), request.expectedVersion());
+        int next = family.get(family.size() - 1).getVersionNumber() + 1;
         Instant now = Instant.now(clock);
         previous.markVersioned(now);
         if (request.active()) {
-            deactivateRuleFamily(adminId, previous.getLogicalKey());
+            deactivateRuleFamily(adminId, family);
         } else {
             ruleRepository.saveAndFlush(previous);
         }
@@ -143,14 +142,18 @@ public class EvidenceService {
 
     @Transactional
     public RuleView activateRule(UUID adminId, UUID ruleId, ActivationRequest request) {
-        ConversionRule rule = lockedRule(ruleId);
+        ConversionRule candidate = requiredRule(ruleId);
+        if (request.active()) {
+            requiredActiveSource(candidate.getSourceId());
+        }
+        List<ConversionRule> family = lockedRuleFamily(ruleId);
+        ConversionRule rule = ruleMember(family, ruleId);
         requireVersion(rule.resourceVersion(), request.expectedVersion());
         if (rule.isActive() == request.active()) {
             return toRuleView(rule);
         }
         if (request.active()) {
-            requiredActiveSource(rule.getSourceId());
-            deactivateRuleFamily(adminId, rule.getLogicalKey());
+            deactivateRuleFamily(adminId, family);
         }
         rule.setActive(request.active(), Instant.now(clock));
         ConversionRule saved = ruleRepository.saveAndFlush(rule);
@@ -201,9 +204,9 @@ public class EvidenceService {
         }
     }
 
-    private void deactivateRuleFamily(UUID adminId, UUID logicalKey) {
+    private void deactivateRuleFamily(UUID adminId, List<ConversionRule> family) {
         Instant now = Instant.now(clock);
-        var activeRules = ruleRepository.findActiveByLogicalKeyForUpdate(logicalKey);
+        var activeRules = family.stream().filter(ConversionRule::isActive).toList();
         activeRules.forEach(active -> active.setActive(false, now));
         ruleRepository.saveAllAndFlush(activeRules);
         activeRules.forEach(active -> auditRule(adminId, "RULE_REPLACED", active));
@@ -224,6 +227,19 @@ public class EvidenceService {
                 .orElseThrow(() -> new AuthException(ErrorCode.EVIDENCE_NOT_FOUND));
     }
 
+    private List<Source> lockedSourceFamily(UUID id) {
+        List<Source> family = sourceRepository.findFamilyByMemberIdForUpdate(id);
+        if (family.isEmpty()) {
+            throw new AuthException(ErrorCode.EVIDENCE_NOT_FOUND);
+        }
+        return family;
+    }
+
+    private Source sourceMember(List<Source> family, UUID id) {
+        return family.stream().filter(source -> source.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new AuthException(ErrorCode.EVIDENCE_NOT_FOUND));
+    }
+
     private Source requiredActiveSource(UUID id) {
         Source source = lockedSource(id);
         if (!source.isActive()) {
@@ -239,6 +255,19 @@ public class EvidenceService {
 
     private ConversionRule lockedRule(UUID id) {
         return ruleRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new AuthException(ErrorCode.EVIDENCE_NOT_FOUND));
+    }
+
+    private List<ConversionRule> lockedRuleFamily(UUID id) {
+        List<ConversionRule> family = ruleRepository.findFamilyByMemberIdForUpdate(id);
+        if (family.isEmpty()) {
+            throw new AuthException(ErrorCode.EVIDENCE_NOT_FOUND);
+        }
+        return family;
+    }
+
+    private ConversionRule ruleMember(List<ConversionRule> family, UUID id) {
+        return family.stream().filter(rule -> rule.getId().equals(id)).findFirst()
                 .orElseThrow(() -> new AuthException(ErrorCode.EVIDENCE_NOT_FOUND));
     }
 

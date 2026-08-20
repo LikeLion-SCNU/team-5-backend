@@ -12,11 +12,30 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SourceRepository extends JpaRepository<Source, UUID> {
-    List<Source> findByActiveTrueOrderByTitleAscVersionNumberDesc();
+    @Query("""
+            select s from Source s
+            where s.active = true
+              and not exists (
+                  select newer.id from Source newer
+                  where newer.logicalKey = s.logicalKey
+                    and newer.active = true
+                    and newer.versionNumber > s.versionNumber
+              )
+            order by s.title asc
+            """)
+    List<Source> findLatestActiveVersions();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Source s where s.id = :id")
     Optional<Source> findByIdForUpdate(@Param("id") UUID id);
 
-    Optional<Source> findFirstByLogicalKeyOrderByVersionNumberDesc(UUID logicalKey);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select s from Source s
+            where s.logicalKey = (
+                select target.logicalKey from Source target where target.id = :id
+            )
+            order by s.versionNumber asc
+            """)
+    List<Source> findFamilyByMemberIdForUpdate(@Param("id") UUID id);
 }
