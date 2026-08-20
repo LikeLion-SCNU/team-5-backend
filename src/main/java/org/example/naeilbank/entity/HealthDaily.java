@@ -51,11 +51,15 @@ public class HealthDaily {
         this.recordDate = Objects.requireNonNull(recordDate, "recordDate");
     }
 
-    public void replace(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
-        this.sleepMinutes = sleepMinutes;
-        this.steps = steps;
-        this.screenMinutes = screenMinutes;
-        this.syncStatus = syncStatus(sleepMinutes, steps, screenMinutes);
+    public void mergeMissing(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+        this.sleepMinutes = merge(this.sleepMinutes, sleepMinutes);
+        this.steps = merge(this.steps, steps);
+        this.screenMinutes = merge(this.screenMinutes, screenMinutes);
+        this.syncStatus = syncStatus(this.sleepMinutes, this.steps, this.screenMinutes);
+    }
+
+    private Integer merge(Integer current, Integer incoming) {
+        return current == null ? incoming : current;
     }
 
     private SyncStatus syncStatus(Integer sleepMinutes, Integer steps, Integer screenMinutes) {

@@ -41,7 +41,10 @@ public class HealthService {
         HealthDaily healthDaily = healthDailyRepository
                 .findByUserIdAndRecordDateForUpdate(userId, request.recordDate())
                 .orElseGet(() -> new HealthDaily(userId, request.recordDate()));
-        healthDaily.replace(request.sleepMinutes(), request.steps(), request.screenMinutes());
+        rejectCorrection(healthDaily.getSleepMinutes(), request.sleepMinutes());
+        rejectCorrection(healthDaily.getSteps(), request.steps());
+        rejectCorrection(healthDaily.getScreenMinutes(), request.screenMinutes());
+        healthDaily.mergeMissing(request.sleepMinutes(), request.steps(), request.screenMinutes());
         healthDaily = healthDailyRepository.saveAndFlush(healthDaily);
 
         List<ConversionReceipt> receipts = new ArrayList<>();
@@ -84,6 +87,12 @@ public class HealthService {
     private void requireNonNegative(Integer value) {
         if (value != null && value < 0) {
             throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
+        }
+    }
+
+    private void rejectCorrection(Integer current, Integer incoming) {
+        if (current != null && incoming != null && !current.equals(incoming)) {
+            throw new AuthException(ErrorCode.HEALTH_DATA_CONFLICT);
         }
     }
 }

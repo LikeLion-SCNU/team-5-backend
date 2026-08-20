@@ -57,10 +57,13 @@ public class MealService {
     }
 
     public MealView retryAnalysis(UUID userId, UUID mealId) {
-        MealStatus status = transaction().execute(tx -> mealRecordRepository
-                .findByIdAndUserIdForUpdate(mealId, userId)
-                .orElseThrow(() -> new AuthException(ErrorCode.MEAL_NOT_FOUND))
-                .getStatus());
+        MealStatus status = transaction().execute(tx -> {
+            lockUser(userId);
+            consentGuard.requireGranted(userId, Consent.Purpose.MEAL_AI);
+            return mealRecordRepository.findByIdAndUserIdForUpdate(mealId, userId)
+                    .orElseThrow(() -> new AuthException(ErrorCode.MEAL_NOT_FOUND))
+                    .getStatus();
+        });
         if (status != MealStatus.analyzing) {
             return get(userId, mealId);
         }
@@ -69,6 +72,10 @@ public class MealService {
                 .orElseThrow(() -> new AuthException(ErrorCode.MEAL_NOT_FOUND))
                 .getMediaBlobId());
         MediaDownload download = mediaService.download(userId, mediaBlobId);
+        transaction().executeWithoutResult(tx -> {
+            lockUser(userId);
+            consentGuard.requireGranted(userId, Consent.Purpose.MEAL_AI);
+        });
         AnalyzedMeal analysis = mealAnalysisClient.analyze(download.metadata().contentType(), downloadContent(download));
         return transaction().execute(tx -> applyAnalysis(userId, mealId, analysis));
     }
@@ -82,6 +89,8 @@ public class MealService {
 
     @Transactional
     public MealView confirm(UUID userId, UUID mealId, ConfirmMealRequest request) {
+        lockUser(userId);
+        consentGuard.requireGranted(userId, Consent.Purpose.MEAL_AI);
         MealRecord record = mealRecordRepository.findByIdAndUserIdForUpdate(mealId, userId)
                 .orElseThrow(() -> new AuthException(ErrorCode.MEAL_NOT_FOUND));
         if (record.getStatus() == MealStatus.confirmed || record.getStatus() == MealStatus.excluded) {
@@ -124,6 +133,7 @@ public class MealService {
 
     @Transactional
     public MealView exclude(UUID userId, UUID mealId) {
+        lockUser(userId);
         MealRecord record = mealRecordRepository.findByIdAndUserIdForUpdate(mealId, userId)
                 .orElseThrow(() -> new AuthException(ErrorCode.MEAL_NOT_FOUND));
         if (record.getStatus() == MealStatus.confirmed) {
@@ -137,8 +147,7 @@ public class MealService {
     }
 
     private UUID ensureRecord(UUID userId, CreateMealRequest request) {
-        userRepository.findByIdForUpdate(userId)
-                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
+        lockUser(userId);
         consentGuard.requireGranted(userId, Consent.Purpose.MEAL_AI);
         MediaMetadata media = mediaService.metadata(userId, request.mediaBlobId());
         if (media.purpose() != MediaBlob.Purpose.meal_input) {
@@ -196,5 +205,10 @@ public class MealService {
 
     private TransactionTemplate transaction() {
         return new TransactionTemplate(transactionManager);
+    }
+
+    private void lockUser(UUID userId) {
+        userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
     }
 }

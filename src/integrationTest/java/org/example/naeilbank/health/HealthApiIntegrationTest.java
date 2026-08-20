@@ -68,8 +68,18 @@ class HealthApiIntegrationTest {
                 {"record_date":"2026-08-20","sleep_minutes":480,"steps":2500,"screen_minutes":60}
                 """).andExpect(status().isOk())
                 .andExpect(jsonPath("$.conversions[0].replayed").value(true));
+        upsert(userId, """
+                {"record_date":"2026-08-20","steps":2500}
+                """).andExpect(status().isOk())
+                .andExpect(jsonPath("$.sync_status").value("synced"));
+        upsert(userId, """
+                {"record_date":"2026-08-20","steps":3000}
+                """).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("HEALTH_DATA_CONFLICT"));
 
         assertThat(count("health_daily", userId)).isOne();
+        assertThat(jdbc.queryForObject("select steps from health_daily where user_id = ?",
+                Integer.class, userId)).isEqualTo(2500);
         assertThat(count("ledger_entries", userId)).isEqualTo(3);
         assertThat(count("conversion_postings", userId)).isEqualTo(3);
     }

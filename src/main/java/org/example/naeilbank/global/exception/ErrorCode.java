@@ -46,6 +46,7 @@ public enum ErrorCode {
     INVALID_LEDGER_DATE_RANGE(HttpStatus.BAD_REQUEST, "원장 조회 날짜 범위가 올바르지 않습니다."),
     INVALID_LEDGER_PAGE(HttpStatus.BAD_REQUEST, "원장 페이지 요청이 올바르지 않습니다."),
     INVALID_HEALTH_DATA(HttpStatus.BAD_REQUEST, "건강 데이터 요청이 올바르지 않습니다."),
+    HEALTH_DATA_CONFLICT(HttpStatus.CONFLICT, "이미 분개된 건강 데이터는 같은 날짜에서 변경할 수 없습니다."),
     MEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "식사 기록을 찾을 수 없습니다."),
     INVALID_MEAL_REQUEST(HttpStatus.BAD_REQUEST, "식사 요청 값이 올바르지 않습니다."),
     MEAL_STATE_CONFLICT(HttpStatus.CONFLICT, "현재 식사 상태에서는 요청을 처리할 수 없습니다."),
