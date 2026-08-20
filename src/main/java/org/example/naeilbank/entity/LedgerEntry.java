@@ -4,15 +4,16 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.annotations.Immutable;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "ledger_entries")
 @Getter
-@EntityListeners(AuditingEntityListener.class)
+@Immutable
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LedgerEntry {
 
@@ -20,20 +21,44 @@ public class LedgerEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rule_id")
-    private ConversionRule conversionRule;
+    @Column(name = "entry_date", nullable = false)
+    private LocalDate entryDate;
 
-    @Column(nullable = false)
-    private Integer amount; // 변동 수치 (+/-)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "habit_type", nullable = false)
+    private ConversionRule.HabitType habitType;
 
-    private String description;
+    @Column(name = "minutes_delta", nullable = false)
+    private int minutesDelta;
 
-    @CreatedDate
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "rule_id", nullable = false)
+    private UUID ruleId;
+
+    @Column(name = "ref_type")
+    private String referenceType;
+
+    @Column(name = "ref_id")
+    private UUID referenceId;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
+
+    public static LedgerEntry posted(UUID userId, LocalDate entryDate,
+                                     ConversionRule.HabitType habitType, int minutesDelta,
+                                     UUID ruleId, String referenceType, UUID referenceId,
+                                     Instant createdAt) {
+        LedgerEntry entry = new LedgerEntry();
+        entry.userId = userId;
+        entry.entryDate = entryDate;
+        entry.habitType = habitType;
+        entry.minutesDelta = minutesDelta;
+        entry.ruleId = ruleId;
+        entry.referenceType = referenceType;
+        entry.referenceId = referenceId;
+        entry.createdAt = createdAt;
+        return entry;
+    }
 }

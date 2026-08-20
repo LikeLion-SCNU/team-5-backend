@@ -1,0 +1,14 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: naeil_bank_test
+      POSTGRES_USER: naeil
+      POSTGRES_PASSWORD: naeil_test
+    ports:
+      - "54320:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U naeil -d naeil_bank_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

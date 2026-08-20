@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.example.naeilbank.global.exception.AuthException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,16 +21,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String token = resolveToken(request);
 
-        // 토큰이 존재하고 유효하다면 SecurityContext에 저장
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            Authentication authentication = jwtTokenProvider.getAuthentication(token);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (StringUtils.hasText(token)) {
+            try {
+                Authentication authentication = jwtTokenProvider.getAuthentication(token);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (AuthException e) {
+                SecurityContextHolder.clearContext();
+                request.setAttribute("auth.errorCode", e.getErrorCode());
+            }
         }
 
         filterChain.doFilter(request, response);

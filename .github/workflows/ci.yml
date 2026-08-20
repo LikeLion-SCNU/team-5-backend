@@ -1,0 +1,52 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test and package
+        run: ./gradlew --no-daemon clean test integrationTest bootJar
+
+  unsupported-jdk-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Java 17 must fail the runtime gate
+        shell: bash
+        run: |
+          if ./gradlew --no-daemon verifyRuntimeJava21; then
+            echo "verifyRuntimeJava21 unexpectedly accepted Java 17" >&2
+            exit 1
+          fi

@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(
@@ -19,15 +21,14 @@ import java.time.LocalDate;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class HealthDaily extends BaseTimeEntity {
+public class HealthDaily {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
     @Column(name = "record_date", nullable = false)
     private LocalDate recordDate;
@@ -35,9 +36,52 @@ public class HealthDaily extends BaseTimeEntity {
     @Column(name = "sleep_minutes")
     private Integer sleepMinutes; // 누락 시 null
 
-    @Column(name = "step_count")
-    private Integer stepCount; // 누락 시 null
+    @Column(name = "steps")
+    private Integer steps;
 
-    @Column(name = "heart_rate_avg")
-    private Integer heartRateAvg; // 누락 시 null
+    @Column(name = "screen_minutes")
+    private Integer screenMinutes;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sync_status", nullable = false)
+    private SyncStatus syncStatus = SyncStatus.synced;
+
+    public HealthDaily(UUID userId, LocalDate recordDate) {
+        this.userId = Objects.requireNonNull(userId, "userId");
+        this.recordDate = Objects.requireNonNull(recordDate, "recordDate");
+    }
+
+    public void mergeMissing(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+        this.sleepMinutes = merge(this.sleepMinutes, sleepMinutes);
+        this.steps = merge(this.steps, steps);
+        this.screenMinutes = merge(this.screenMinutes, screenMinutes);
+        this.syncStatus = syncStatus(this.sleepMinutes, this.steps, this.screenMinutes);
+    }
+
+    private Integer merge(Integer current, Integer incoming) {
+        return current == null ? incoming : current;
+    }
+
+    private SyncStatus syncStatus(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+        int present = 0;
+        if (sleepMinutes != null) {
+            present++;
+        }
+        if (steps != null) {
+            present++;
+        }
+        if (screenMinutes != null) {
+            present++;
+        }
+        if (present == 0) {
+            return SyncStatus.missing;
+        }
+        return present == 3 ? SyncStatus.synced : SyncStatus.partial;
+    }
+
+    public enum SyncStatus {
+        synced,
+        partial,
+        missing
+    }
 }

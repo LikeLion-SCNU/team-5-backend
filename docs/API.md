@@ -1,6 +1,6 @@
-# 내일은행 API 명세 v1
+# 시간은행 API 명세 v1
 
-> 기준: 매니패스트 기능명세 v12 + DB 설계서 v1.1 | 모든 경로는 `/api` 프록시 뒤 (프론트는 상대경로 `/api/...`로 호출)
+> 기준: 매니패스트 기능명세 v14 · 인증 경로는 실구현(/api/v1/auth/*) 반영 + DB 설계서 v1.1 | 모든 경로는 `/api` 프록시 뒤 (프론트는 상대경로 `/api/...`로 호출)
 > 인증: `Authorization: Bearer {access_token}` (🔓 표시 = 인증 불필요)
 > 에러 형식 통일: `{"error": {"code": "string", "message": "사용자용 한국어 메시지"}}`
 
@@ -15,15 +15,21 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST 🔓 | `/auth/signup` | 이메일 가입 `{email, password, nickname}` → 201 + 토큰 |
-| POST 🔓 | `/auth/login` | 이메일 로그인 `{email, password}` → 토큰 |
-| POST 🔓 | `/auth/kakao` | 카카오 로그인 `{code}` (인가코드) → 토큰, 신규면 자동 가입 |
-| POST 🔓 | `/auth/refresh` | `{refresh_token}` → 새 토큰 쌍 (기존 리프레시 회전 폐기) |
-| POST | `/auth/logout` | `{refresh_token}` → 204, 토큰 폐기 |
+| POST 🔓 | `/api/v1/auth/join` | 이메일 가입 `{email, password, nickname}` → 201 + 토큰 |
+| POST 🔓 | `/api/v1/auth/login` | 이메일 로그인 `{email, password}` → 토큰 |
+| POST 🔓 | `/api/v1/auth/kakao` | 카카오 로그인 `{code}` (인가코드) → 토큰, 신규면 자동 가입 |
+| POST 🔓 | `/api/v1/auth/refresh` | `{refresh_token}` → 새 토큰 쌍 (기존 리프레시 회전 폐기) |
+| POST | `/api/v1/auth/logout` | `{refresh_token}` → 204, 토큰 폐기 |
+
+카카오 OAuth 계약:
+- 실제 백엔드 API 엔드포인트는 `POST /api/v1/auth/kakao`이며, 브라우저 리다이렉트 콜백 URL이 아니다.
+- Kakao Developers 콘솔 Redirect URI는 프론트엔드가 인가 `code`를 받는 URL이고, 백엔드 `KAKAO_REDIRECT_URI`와 정확히 일치해야 한다.
+- 현재 개발 기본값은 `http://localhost:5173/oauth/kakao/callback`이다. 콘솔에 `/auth/kakao/callback`을 등록하면 현재 개발 설정과 불일치한다.
+- 운영 Redirect URI는 배포 환경변수 `KAKAO_REDIRECT_URI` 값으로 결정한다. 배포 URL을 문서에서 추정하지 않는다.
 
 토큰 응답 공통:
 ```json
-{ "access_token": "jwt...", "refresh_token": "jwt...", "expires_in": 1800 }
+{ "accessToken": "jwt...", "refreshToken": "opaque...", "tokenType": "Bearer", "expiresIn": 1800 }
 ```
 규칙: 액세스 30분 / 리프레시 14일(해시 저장·회전). 비밀번호 8자+문자·숫자, bcrypt 해시.
 
@@ -54,30 +60,53 @@ GET /meals/{id} 응답:
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/ledger/balance` | 홈 카드용 `{total_minutes, yesterday_net_minutes}` — **v_balance/v_daily_net 뷰만 조회** |
-| GET | `/ledger/statements/{date}` | 일별 명세서 (아래 예시) |
-| GET | `/ledger/trend?period=7d\|4w` | `[{date, net_minutes}]` 추세 |
+| GET | `/api/v1/ledger/balance` | 홈 카드용 잔고·전일 증감 — **v_balance/v_daily_net 뷰만 조회** |
+| GET | `/api/v1/ledger/statements?from=YYYY-MM-DD&to=YYYY-MM-DD&page=0&size=20` | 날짜 단위 일별 명세서 페이지 |
+| GET | `/api/v1/ledger/trends/daily?to=YYYY-MM-DD` | 종료일 기준 7일 일별 추세 |
+| GET | `/api/v1/ledger/trends/weekly?to=YYYY-MM-DD` | 종료일 포함 주 기준 4주 월요일 시작 추세 |
 | PUT | `/health/daily` | 건강 데이터 upsert `{record_date, sleep_minutes?, steps?, screen_minutes?}` → 환산 배치 트리거 (데모: 시드 주입용) |
 
-GET /ledger/statements/2026-08-22 응답:
+`GET /api/v1/ledger/statements?from=2026-08-22&to=2026-08-22` 응답:
 ```json
 {
-  "date": "2026-08-22", "net_minutes": 134,
-  "entries": [
-    {"habit_type": "sleep", "label": "수면 7시간 30분", "minutes_delta": 90, "rule_id": "uuid", "source_id": "uuid"}
-  ],
-  "protection_mode": false
+  "from": "2026-08-22", "to": "2026-08-22", "page": 0, "size": 20,
+  "hasNext": false, "totalDays": 1,
+  "days": [{
+    "entryDate": "2026-08-22", "dailyNetMinutes": 134,
+    "cumulativeBalanceMinutes": 134, "previousDayDeltaMinutes": 0,
+    "lines": [{
+      "entryId": 1, "entryDate": "2026-08-22", "habitType": "sleep",
+      "minutesDelta": 90, "displayText": "입금 90분",
+      "sourceType": "health_daily", "sourceId": "uuid"
+    }]
+  }]
 }
 ```
-규칙: 환산 계수는 conversion_rules 테이블에서 로드(하드코딩 금지). ledger_entries는 append-only. **보호 모드 사용자에겐 음수 필드를 그대로 주되 `protection_mode: true` 플래그 포함 → 표시는 프론트가 중립 처리.**
+규칙: 환산 계수는 conversion_rules 테이블에서 로드(하드코딩 금지).
+ledger_entries는 append-only다. 보호 모드는 숫자·집계·행을 바꾸지 않고 음수 행의
+`displayText`만 회복 중심 문구로 바꾼다. 날짜와 명세서는 `Asia/Seoul` 고정이며
+사용자별 시간대를 사용하지 않는다.
 
 ## §4. 논문 출처 (F-ILQWSY / 관리자 F-XDDAGG)
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET 🔓 | `/sources/{id}` | 출처 상세 `{title, authors, journal, pub_year, doi_url, summary_ko, limitations_ko}` |
-| GET | `/admin/rules` · POST · PATCH `/admin/rules/{id}` | 환산 규칙 등록·수정·`{is_active:false}` 비활성화 (관리자) |
-| POST · PATCH | `/admin/sources...` | 출처 등록·수정 (관리자) |
+| GET | `/api/v1/sources` · `/api/v1/sources/{id}` | 활성 출처 목록 및 버전 상세 `{logicalKey, versionNumber, title, doiUrl, summaryKo, scopeKo, limitationsKo}` |
+| GET | `/api/v1/rules` · `/api/v1/rules/{id}` | 활성 환산 규칙 목록 및 출처가 포함된 버전 상세 |
+| GET | `/api/v1/ledger/{entryId}/evidence` | 소유자의 과거 원장 항목에서 당시 `rule_id → source_id` 근거 조회 |
+| POST | `/api/admin/sources` · `/api/admin/sources/{id}/versions` | 출처 신규 등록 및 내용 덮어쓰기 없는 새 버전 생성 (관리자) |
+| PUT | `/api/admin/sources/{id}/activation` | `expectedVersion` 기반 출처 활성/비활성 전환 (관리자) |
+| POST | `/api/admin/rules` · `/api/admin/rules/{id}/versions` | 환산 규칙 신규 등록 및 새 버전 생성 (관리자) |
+| PUT | `/api/admin/rules/{id}/activation` | `expectedVersion` 기반 규칙 활성/비활성 전환 (관리자) |
+
+`V4__version_evidence_sources_and_rules.sql`은 개발 DB에 이미 존재하는 출처·규칙 행을
+그 자리에서 버전 1로 승격한다. 새 논문이나 환산 계수를 시드하지 않으므로 빈 DB는 빈
+카탈로그로 유지되며, 운영 정본 대신 임의 값을 만들지 않는다.
+
+활성 전환은 트랜잭션 커밋 이후 생성되는 신규 계산에만 적용한다. 기존
+`ledger_entries.rule_id`는 변경하지 않으며 과거 근거 상세는 비활성 버전도 ID로 계속
+조회할 수 있다. 출처 목록은 논리 계보별 최신 활성 버전만 노출하고, 이전 버전은 당시
+활성 규칙 및 과거 원장의 근거 해석을 위해 ID 조회를 유지한다.
 
 ## §5. 흑자 전환 플랜 (F-IMUMQN)
 
@@ -112,5 +141,5 @@ GET /ledger/statements/2026-08-22 응답:
 1. 날짜는 `YYYY-MM-DD`, 시간값은 **분(minutes) 정수** (프론트에서 "+2시간 14분" 포맷팅)
 2. 본인 데이터만 접근 (user_id는 JWT에서 추출 — 요청 바디로 받지 않음)
 3. 명세서·잔고는 뷰(v_daily_net/v_balance)만 조회, SUM 재구현 금지
-4. FastAPI 자동 문서: 배포 후 `/api/docs`에서 스웨거 확인 가능하게 유지
+4. OpenAPI/Swagger 엔드포인트는 현재 노출하지 않는다. `/api/docs` 같은 자동 문서 경로는 아직 제공하지 않으며, 이 문서와 컨트롤러 테스트를 기준으로 API 계약을 관리한다.
 5. 데모 우선순위: **§1(로그인 생략 가능) → §2 → §3 → §6** 순으로 구현 (§4 GET, §5, §7은 후순위)

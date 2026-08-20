@@ -2,7 +2,8 @@ package org.example.naeilbank.global.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
+import org.example.naeilbank.global.config.properties.KakaoProperties;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -10,19 +11,14 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Locale;
+
 @Service
+@RequiredArgsConstructor
 public class KakaoOAuthService {
 
-    @Value("${kakao.client-id}")
-    private String clientId;
+    private final KakaoProperties kakaoProperties;
 
-    @Value("${kakao.redirect-uri}")
-    private String redirectUri;
-
-    @Value("${kakao.client-secret}")
-    private String clientSecret; // 🔥 Client Secret 주입
-
-    // 1. 인가 코드로 카카오 Access Token 발급
     public String getKakaoAccessToken(String code) {
         RestTemplate rt = new RestTemplate();
 
@@ -31,16 +27,16 @@ public class KakaoOAuthService {
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
-        params.add("client_id", clientId);
-        params.add("redirect_uri", redirectUri);
+        params.add("client_id", kakaoProperties.clientId());
+        params.add("redirect_uri", kakaoProperties.redirectUri());
         params.add("code", code);
-        params.add("client_secret", clientSecret); // 🔥 카카오로 client_secret 추가 전송!
+        params.add("client_secret", kakaoProperties.clientSecret());
 
         HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(params, headers);
 
         try {
             ResponseEntity<String> response = rt.exchange(
-                    "https://kauth.kakao.com/oauth/token",
+                    kakaoProperties.tokenUri(),
                     HttpMethod.POST,
                     kakaoTokenRequest,
                     String.class
@@ -51,15 +47,12 @@ public class KakaoOAuthService {
             return jsonNode.get("access_token").asText();
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("카카오 토큰 에러 상태코드: " + e.getStatusCode());
-            System.err.println("카카오 토큰 에러 본문: " + e.getResponseBodyAsString());
-            throw new RuntimeException("카카오 Access Token 발급 실패: " + e.getResponseBodyAsString(), e);
+            throw new RuntimeException("카카오 Access Token 발급 실패: " + e.getStatusCode(), e);
         } catch (Exception e) {
             throw new RuntimeException("카카오 Access Token 발급 중 알 수 없는 에러", e);
         }
     }
 
-    // 2. 카카오 Access Token으로 사용자 프로필 조회
     public KakaoUserInfo getKakaoUserInfo(String accessToken) {
         RestTemplate rt = new RestTemplate();
 
@@ -71,7 +64,7 @@ public class KakaoOAuthService {
 
         try {
             ResponseEntity<String> response = rt.exchange(
-                    "https://kapi.kakao.com/v2/user/me",
+                    kakaoProperties.userInfoUri(),
                     HttpMethod.POST,
                     kakaoProfileRequest,
                     String.class
@@ -80,7 +73,12 @@ public class KakaoOAuthService {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(response.getBody());
 
-            Long id = jsonNode.get("id").asLong();
+            JsonNode idNode = jsonNode.get("id");
+            if (idNode == null || idNode.isNull() || !idNode.isIntegralNumber() || !idNode.canConvertToLong()
+                    || idNode.asLong() <= 0) {
+                throw new IllegalArgumentException("Kakao id is required");
+            }
+            Long id = idNode.asLong();
 
             String nickname = "카카오유저";
             JsonNode properties = jsonNode.get("properties");
@@ -88,21 +86,32 @@ public class KakaoOAuthService {
                 nickname = properties.get("nickname").asText();
             }
 
-            String email;
-            JsonNode kakaoAccount = jsonNode.get("kakao_account");
-            if (kakaoAccount != null && kakaoAccount.has("email")) {
-                email = kakaoAccount.get("email").asText();
-            } else {
-                email = "kakao_" + id + "@test.com";
-            }
+            String email = resolveEmail(jsonNode.get("kakao_account"), id);
 
             return new KakaoUserInfo(id, email, nickname);
 
         } catch (HttpStatusCodeException e) {
-            System.err.println("카카오 유저정보 에러 본문: " + e.getResponseBodyAsString());
-            throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getResponseBodyAsString(), e);
+            throw new RuntimeException("카카오 사용자 정보 조회 실패: " + e.getStatusCode(), e);
         } catch (Exception e) {
             throw new RuntimeException("카카오 사용자 정보 조회 중 알 수 없는 에러", e);
         }
+    }
+
+    private String resolveEmail(JsonNode kakaoAccount, Long id) {
+        if (kakaoAccount != null) {
+            JsonNode emailNode = kakaoAccount.get("email");
+            String email = emailNode == null || emailNode.isNull() ? "" : emailNode.asText().trim();
+            if (!email.isBlank()
+                    && explicitTrue(kakaoAccount, "is_email_valid")
+                    && explicitTrue(kakaoAccount, "is_email_verified")) {
+                return email.toLowerCase(Locale.ROOT);
+            }
+        }
+        return "kakao_" + id + "@users.invalid";
+    }
+
+    private boolean explicitTrue(JsonNode node, String fieldName) {
+        JsonNode value = node.get(fieldName);
+        return value != null && value.isBoolean() && value.asBoolean();
     }
 }
