@@ -24,11 +24,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+    /** 존재하지 않는 계정에도 같은 비용의 해시 비교를 수행하기 위한 더미 해시 (어떤 비밀번호와도 불일치) */
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2a$10$ZZZZZZZZZZZZZZZZZZZZZuZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final KakaoOAuthService kakaoOAuthService;
@@ -81,9 +86,12 @@ public class AuthService {
 
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .filter(found -> found.getPassword() != null)
-                .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
+        Optional<User> found = userRepository.findByEmail(request.email())
+                .filter(candidate -> candidate.getPassword() != null);
+        // 계정이 없어도 해시 비교 비용을 동일하게 치러 응답 시간으로 가입 여부가 드러나지 않게 한다.
+        boolean matches = passwordEncoder.matches(request.password(),
+                found.map(User::getPassword).orElse(DUMMY_PASSWORD_HASH));
+        User user = found.filter(candidate -> matches)
                 .orElseThrow(() -> new AuthException(ErrorCode.INVALID_CREDENTIALS));
 
         if (emailVerificationService.isEnabled() && !user.isEmailVerified()) {

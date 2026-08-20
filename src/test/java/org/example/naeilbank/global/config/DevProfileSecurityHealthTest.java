@@ -118,6 +118,9 @@ class DevProfileSecurityHealthTest {
     private TransactionTemplate transactionTemplate;
 
     @MockBean
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @MockBean
     private WebPushSubscriptionRepository webPushSubscriptionRepository;
 
     @MockBean
