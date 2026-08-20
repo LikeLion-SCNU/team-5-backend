@@ -1,6 +1,7 @@
 package org.example.naeilbank.domain.face;
 
 import lombok.RequiredArgsConstructor;
+import org.example.naeilbank.domain.audit.AuditAppendService;
 import org.example.naeilbank.domain.media.GeneratedMediaStore;
 import org.example.naeilbank.domain.media.MediaModels.MediaDownload;
 import org.example.naeilbank.domain.media.MediaService;
@@ -13,6 +14,8 @@ import org.example.naeilbank.domain.model.repository.FaceSimulationOutputReposit
 import org.example.naeilbank.domain.model.repository.FaceSimulationRepository;
 import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
 import org.example.naeilbank.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -24,10 +27,14 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class FaceSimulationGenerationService {
+    private static final Logger log = LoggerFactory.getLogger(FaceSimulationGenerationService.class);
+
+    private final AuditAppendService auditAppendService;
     private final FaceSimulationRepository simulationRepository;
     private final FaceSimulationOutputRepository outputRepository;
     private final MediaBlobRepository mediaBlobRepository;
@@ -123,6 +130,29 @@ public class FaceSimulationGenerationService {
                 improvedResult.promptVersion()
         ));
         simulation.markDone(Instant.now(clock));
+        purgeSource(claimed.userId(), simulation);
+    }
+
+    /**
+     * 업로드 화면이 고지한 대로 결과 생성 직후 원본 사진을 파기한다.
+     * 파기에 실패해도 생성 결과는 유지하고 경고만 남긴다(사용자 삭제 경로가 여전히 남아 있다).
+     */
+    private void purgeSource(UUID userId, FaceSimulation simulation) {
+        UUID sourceMediaId = simulation.getSourceMediaId();
+        if (sourceMediaId == null) {
+            return;
+        }
+        simulation.purgeSource();
+        simulationRepository.saveAndFlush(simulation);
+        try {
+            if (!simulationRepository.existsByUserIdAndSourceMediaId(userId, sourceMediaId)) {
+                mediaService.delete(userId, sourceMediaId);
+                auditAppendService.appendFaceDeletion(userId, "FACE_INPUT_MEDIA", sourceMediaId);
+            }
+        } catch (RuntimeException exception) {
+            log.warn("얼굴 원본 자동 파기 실패 simulationId={} cause={}",
+                    simulation.getId(), exception.getMessage());
+        }
     }
 
     private FaceSimulation lockProcessable(FaceSimulationProcessor.ClaimedSimulation claimed) {

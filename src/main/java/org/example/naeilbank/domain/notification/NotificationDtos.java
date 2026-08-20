@@ -66,7 +66,7 @@ public final class NotificationDtos {
     public record PreferenceResponse(
             boolean enabled,
             String timezone,
-            LocalTime morningTime
+            @JsonFormat(pattern = "HH:mm") LocalTime morningTime
     ) {
     }
 

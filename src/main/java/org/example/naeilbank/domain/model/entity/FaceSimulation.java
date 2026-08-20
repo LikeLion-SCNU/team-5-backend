@@ -46,7 +46,8 @@ public class FaceSimulation {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    @Column(name = "source_media_id", nullable = false)
+    /** 생성 완료 시 원본 사진을 파기하면서 함께 비운다. */
+    @Column(name = "source_media_id")
     private UUID sourceMediaId;
 
     @Column(name = "idempotency_key", nullable = false)
@@ -132,6 +133,11 @@ public class FaceSimulation {
         this.processingStartedAt = null;
         this.claimToken = null;
         this.failureReason = requireText(reason, "reason");
+    }
+
+    /** 결과 이미지가 저장된 뒤 원본 참조를 끊는다(원본 blob은 호출자가 삭제). */
+    public void purgeSource() {
+        this.sourceMediaId = null;
     }
 
     public void markDone(Instant now) {

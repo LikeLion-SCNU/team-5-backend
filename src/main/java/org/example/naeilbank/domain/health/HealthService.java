@@ -33,6 +33,8 @@ public class HealthService {
     private static final int ACTIVITY_CREDIT_CAP_MINUTES = 20;
     private static final int SCREEN_DEBIT_CAP_MINUTES = 6 * 60;
     private static final int DAILY_MINUTES_LIMIT = 24 * 60;
+    /** 명백한 오염 입력만 거르는 하루 걸음 상한 */
+    private static final int DAILY_STEPS_LIMIT = 200_000;
     private static final BigDecimal MINUTES_PER_HOUR = new BigDecimal("60");
     private static final int INPUT_SCALE = 12;
 

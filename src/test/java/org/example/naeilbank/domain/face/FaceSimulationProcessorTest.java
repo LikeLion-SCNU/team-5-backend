@@ -68,6 +68,7 @@ class FaceSimulationProcessorTest {
     @BeforeEach
     void setUp() {
         generationService = new FaceSimulationGenerationService(
+                org.mockito.Mockito.mock(org.example.naeilbank.domain.audit.AuditAppendService.class),
                 simulationRepository,
                 outputRepository,
                 mediaBlobRepository,
