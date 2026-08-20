@@ -30,7 +30,7 @@
 
 | 구분 | 기술 |
 |---|---|
-| Framework | FastAPI (Python 3.12) |
+| Framework | Spring Boot 3 (Java 21, Gradle) |
 | Database | PostgreSQL 16 — 원장(append-only) 패턴, 14테이블 |
 | Auth | JWT (액세스 30분 / 리프레시 14일) + 카카오 OAuth |
 | Infra | Gabia Cloud, Docker Compose, GitHub Actions CI/CD |
@@ -53,12 +53,10 @@
 ## 🏁 시작하기 (로컬)
 
 ```bash
-pip install -r requirements.txt
-uvicorn main:app --reload   # http://localhost:8000/docs
+./gradlew bootRun   # http://localhost:8080
 ```
 
-- 현재 `main.py`는 파이프라인 검증용 플레이스홀더 — 실제 구현으로 교체하세요 (Dockerfile 진입점 `uvicorn main:app` 유지 또는 CMD 수정)
-- 서버 DB 접속: 배포 환경에서 `DATABASE_URL` 환경변수 자동 주입 (`naeil-db:5432`)
+- 서버 DB 접속: 배포 환경에서 `SPRING_DATASOURCE_*` 환경변수 자동 주입 (`naeil-db:5432`)
 - DB 스키마(14테이블)는 서버에 적용 완료 — 원장 테이블(`ledger_entries`)은 **append-only** (UPDATE/DELETE 트리거 차단), 잔고·명세서 조회는 반드시 `v_daily_net`/`v_balance` 뷰 사용
 
 ## 👥 Team 되는코드입니다.
