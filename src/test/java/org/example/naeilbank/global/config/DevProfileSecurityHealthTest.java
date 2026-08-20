@@ -1,6 +1,8 @@
 package org.example.naeilbank.global.config;
 
 import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
+import org.example.naeilbank.domain.model.repository.AuditEventRepository;
+import org.example.naeilbank.domain.model.repository.ConsentRepository;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.example.naeilbank.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -51,6 +53,12 @@ class DevProfileSecurityHealthTest {
 
     @MockBean
     private RefreshTokenRepository refreshTokenRepository;
+
+    @MockBean
+    private ConsentRepository consentRepository;
+
+    @MockBean
+    private AuditEventRepository auditEventRepository;
 
     @Test
     void devProfileHealthEndpointIsPublicWithFixtureConfiguration() throws Exception {
