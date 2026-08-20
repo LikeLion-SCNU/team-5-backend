@@ -142,10 +142,24 @@ class FaceSimulationApiIntegrationTest {
                 .andExpect(jsonPath("$.items.length()").value(1))
                 .andExpect(jsonPath("$.hasNext").value(false));
 
+        // 생성이 끝나면 업로드 고지대로 원본 사진이 즉시 파기된다.
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from media_blobs where id = ?", Integer.class, sourceMediaId)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select source_media_id from face_simulations where id = ?", UUID.class, simulationId)).isNull();
+        mockMvc.perform(get("/api/v1/face-media/{id}", sourceMediaId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
+                .andExpect(status().isNotFound());
+
+        // 원본이 파기됐으므로 다음 시뮬레이션은 사진을 다시 올려야 한다.
+        UUID secondSourceMediaId = uploadFaceInput(ownerId, input);
+        String secondRequest = request
+                .replace(sourceMediaId.toString(), secondSourceMediaId.toString())
+                .replace("face-key-1", "face-key-2");
         JsonNode second = objectMapper.readTree(mockMvc.perform(post("/api/v1/face-simulations")
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(request.replace("face-key-1", "face-key-2")))
+                        .content(secondRequest))
                 .andExpect(status().isAccepted())
                 .andReturn().getResponse().getContentAsString());
         UUID secondSimulationId = UUID.fromString(second.at("/id").asText());
@@ -165,7 +179,6 @@ class FaceSimulationApiIntegrationTest {
                 "select count(*) from face_simulation_outputs where simulation_id in (?, ?)",
                 Integer.class, simulationId, secondSimulationId)).isEqualTo(4);
 
-        download(ownerId, sourceMediaId).andExpect(status().isOk()).andExpect(content().bytes(input));
         download(ownerId, currentMediaId).andExpect(status().isOk()).andExpect(content().bytes(current));
         mockMvc.perform(head("/api/v1/face-media/{id}", improvedMediaId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
@@ -197,19 +210,19 @@ class FaceSimulationApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isNoContent());
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from media_blobs where id = ?", Integer.class, sourceMediaId)).isOne();
+                "select count(*) from media_blobs where id = ?", Integer.class, secondSourceMediaId)).isZero();
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from face_simulations where id = ?", Integer.class, secondSimulationId)).isOne();
 
-        mockMvc.perform(delete("/api/v1/face-media/{id}", sourceMediaId)
+        mockMvc.perform(delete("/api/v1/face-simulations/{id}", secondSimulationId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isNoContent());
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from media_blobs where user_id = ?", Integer.class, ownerId)).isZero();
-        mockMvc.perform(get("/api/v1/face-media/{id}", sourceMediaId)
+        mockMvc.perform(get("/api/v1/face-media/{id}", secondSourceMediaId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(delete("/api/v1/face-media/{id}", sourceMediaId)
+        mockMvc.perform(delete("/api/v1/face-media/{id}", secondSourceMediaId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isNoContent());
         assertThat(jdbcTemplate.queryForObject(

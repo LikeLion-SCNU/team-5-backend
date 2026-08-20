@@ -26,6 +26,7 @@ public class OpenAiMealAnalysisClient implements MealAnalysisClient {
             Set eligibility to FRUIT_OR_VEGETABLE only for an explicit fruit or vegetable serving.
             Set eligibility to NEUTRAL for every other food and every alcoholic drink.
             Do not include unsupported categories.
+            Write food_name and portion in Korean (natural Korean dish names, e.g. "페퍼로니 피자", "1조각").
             """;
 
     private final RestClient restClient;
