@@ -6,6 +6,7 @@ import org.example.naeilbank.domain.model.entity.ProtectionProposal;
 import org.example.naeilbank.domain.model.repository.BalanceViewEventRepository;
 import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
 import org.example.naeilbank.domain.protection.ProtectionDtos.ProtectionProposalResponse;
+import org.example.naeilbank.domain.protection.ProtectionCopyPolicy;
 import org.example.naeilbank.domain.protection.ProtectionService;
 import org.example.naeilbank.entity.User;
 import org.example.naeilbank.repository.UserRepository;
@@ -101,6 +102,6 @@ class LedgerServiceTest {
     }
 
     private LedgerService service(Instant instant) {
-        return new LedgerService(ledger, views, users, protection, Clock.fixed(instant, ZoneOffset.UTC));
+        return new LedgerService(ledger, views, users, protection, new ProtectionCopyPolicy(), Clock.fixed(instant, ZoneOffset.UTC));
     }
 }

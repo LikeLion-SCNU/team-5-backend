@@ -6,6 +6,7 @@ import org.example.naeilbank.domain.model.entity.BalanceViewEvent;
 import org.example.naeilbank.domain.model.entity.ProtectionProposal;
 import org.example.naeilbank.domain.model.repository.BalanceViewEventRepository;
 import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
+import org.example.naeilbank.domain.protection.ProtectionCopyPolicy;
 import org.example.naeilbank.domain.protection.ProtectionService;
 import org.example.naeilbank.entity.User;
 import org.example.naeilbank.global.exception.AuthException;
@@ -29,6 +30,7 @@ public class LedgerService {
     private final BalanceViewEventRepository balanceViewEventRepository;
     private final UserRepository userRepository;
     private final ProtectionService protectionService;
+    private final ProtectionCopyPolicy copyPolicy;
     private final Clock clock;
 
     @Transactional
@@ -50,7 +52,7 @@ public class LedgerService {
         return new GuardedBalance(
                 balance,
                 user.isProtectionMode(),
-                user.isProtectionMode() ? "Balance is available in protected wording." : "Current balance: " + balance + " minutes",
+                copyPolicy.balanceText(user.isProtectionMode(), balance),
                 proposalId,
                 suggested
         );

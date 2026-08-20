@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,19 +43,20 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class PlanService {
-    private static final String STANDARD_TITLE = "Optional weekly advisory plan";
+    private static final int MAX_DAILY_PROGRESS_MINUTES = 1440;
+    private static final String STANDARD_TITLE = "주간 회복 플랜 (참고용)";
     private static final String ADVISORY =
-            "This optional weekly advisory plan is informational only and never changes the ledger.";
+            "이 주간 플랜은 참고용 안내이며, 원장(잔고)에는 어떤 영향도 주지 않습니다.";
     private static final String NO_PLAN_NEEDED =
-            "No weekly advisory plan is needed while the current balance is zero or positive.";
+            "잔고가 0 이상이라 지금은 회복 플랜이 필요하지 않습니다.";
     private static final String NO_ACTIVE_PLAN =
-            "A weekly advisory plan can be generated from the current deficit and saved active conversion rules.";
+            "현재 적자와 저장된 환산 규칙을 바탕으로 주간 회복 플랜을 만들 수 있습니다.";
     private static final String NO_ACTIVE_RULE =
-            "No weekly advisory plan is available because there is no saved active conversion rule.";
+            "저장된 활성 환산 규칙이 없어 회복 플랜을 만들 수 없습니다.";
     private static final String UNREPRESENTABLE =
-            "The current deficit cannot be represented exactly by the saved active conversion rules.";
+            "현재 적자를 저장된 환산 규칙으로 정확히 구성할 수 없습니다.";
     private static final String OUT_OF_RANGE =
-            "The current deficit is outside the supported advisory-plan range.";
+            "현재 적자가 회복 플랜이 지원하는 범위를 벗어났습니다.";
 
     private final PlanRepository planRepository;
     private final PlanActionRepository actionRepository;
@@ -111,7 +113,7 @@ public class PlanService {
                     || !hasCurrentLineage(plan)) {
                 throw error(ErrorCode.PLAN_STALE);
             }
-            LocalDate start = LocalDate.ofInstant(now, ZoneOffset.UTC);
+            LocalDate start = LocalDate.ofInstant(now, ZoneId.of("Asia/Seoul"));
             plan.accept(start, start.plusDays(6), now);
         } else {
             plan.reject(now);
@@ -156,6 +158,9 @@ public class PlanService {
         }
         if (request.progressDate().isBefore(plan.getStartDate()) || request.progressDate().isAfter(plan.getEndDate())) {
             throw error(ErrorCode.PLAN_PROGRESS_DATE_INVALID);
+        }
+        if (request.completedMinutes() > MAX_DAILY_PROGRESS_MINUTES) {
+            throw error(ErrorCode.VALIDATION_FAILED);
         }
         PlanProgress item = progressRepository.findByPlanIdAndProgressDate(planId, request.progressDate())
                 .map(existing -> {
