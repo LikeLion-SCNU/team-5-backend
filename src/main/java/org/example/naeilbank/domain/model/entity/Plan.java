@@ -80,6 +80,9 @@ public class Plan {
     }
 
     public void accept(LocalDate startDate, LocalDate endDate, Instant now) {
+        if (endDate.isBefore(startDate) || !endDate.equals(startDate.plusDays(6))) {
+            throw new IllegalArgumentException("an advisory plan must span exactly seven days");
+        }
         this.status = Status.accepted;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -89,6 +92,14 @@ public class Plan {
     public void reject(Instant now) {
         this.status = Status.rejected;
         this.respondedAt = now;
+    }
+
+    public void applyProgress(int progressDays, int completedMinutes) {
+        if (status != Status.accepted && status != Status.completed) {
+            throw new IllegalStateException("progress requires an accepted plan");
+        }
+        this.progressDays = progressDays;
+        this.status = completedMinutes >= expectedWeeklyMinutes ? Status.completed : Status.accepted;
     }
 
     public enum Status {

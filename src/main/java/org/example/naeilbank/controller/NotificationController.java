@@ -42,6 +42,19 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.register(authenticatedUserId(authentication), request));
     }
 
+    @PutMapping("/subscriptions/{subscriptionId}")
+    public ResponseEntity<SubscriptionResponse> updateSubscription(
+            Authentication authentication,
+            @PathVariable UUID subscriptionId,
+            @Valid @RequestBody SubscriptionRequest request
+    ) {
+        return ResponseEntity.ok(notificationService.updateSubscription(
+                authenticatedUserId(authentication),
+                subscriptionId,
+                request
+        ));
+    }
+
     @DeleteMapping("/subscriptions/{subscriptionId}")
     public ResponseEntity<Void> revoke(Authentication authentication, @PathVariable UUID subscriptionId) {
         notificationService.revoke(authenticatedUserId(authentication), subscriptionId);

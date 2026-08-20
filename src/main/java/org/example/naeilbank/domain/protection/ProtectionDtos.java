@@ -1,5 +1,6 @@
 package org.example.naeilbank.domain.protection;
 
+import jakarta.validation.constraints.NotNull;
 import org.example.naeilbank.domain.model.entity.ProtectionProposal;
 
 import java.time.Instant;
@@ -21,5 +22,8 @@ public final class ProtectionDtos {
             boolean protectionMode,
             ProtectionProposalResponse activeProposal
     ) {
+    }
+
+    public record ProtectionModeRequest(@NotNull Boolean enabled) {
     }
 }

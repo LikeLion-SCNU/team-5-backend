@@ -62,6 +62,7 @@ openai:
   timeout: 30s
 
 web-push:
+  encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
   vapid:
     public-key: test-vapid-public-key-fixture
     private-key: test-vapid-private-key-fixture

@@ -23,6 +23,7 @@ openai:
   timeout: ${OPENAI_TIMEOUT:30s}
 
 web-push:
+  encryption-key: ${WEB_PUSH_ENCRYPTION_KEY:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
   vapid:
     public-key: ${VAPID_PUBLIC_KEY:dev-vapid-public-key-fixture}
     private-key: ${VAPID_PRIVATE_KEY:dev-vapid-private-key-fixture}

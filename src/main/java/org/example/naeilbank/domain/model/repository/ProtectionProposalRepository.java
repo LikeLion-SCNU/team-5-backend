@@ -11,4 +11,6 @@ public interface ProtectionProposalRepository extends JpaRepository<ProtectionPr
     Optional<ProtectionProposal> findByUserIdAndIdempotencyKey(UUID userId, String idempotencyKey);
 
     List<ProtectionProposal> findByUserIdAndStatus(UUID userId, ProtectionProposal.Status status);
+
+    Optional<ProtectionProposal> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
 }

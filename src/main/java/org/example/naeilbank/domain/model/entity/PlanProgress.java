@@ -17,13 +17,9 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "plan_progress",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_plan_progress_plan_date",
-                columnNames = {"plan_id", "progress_date"}
-        )
-)
+@Table(name = "plan_progress", uniqueConstraints = @UniqueConstraint(
+        name = "uk_plan_progress_plan_date", columnNames = {"plan_id", "progress_date"}
+))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PlanProgress {
@@ -45,7 +41,7 @@ public class PlanProgress {
     private long version;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
@@ -57,5 +53,9 @@ public class PlanProgress {
         progress.completedMinutes = completedMinutes;
         progress.createdAt = now;
         return progress;
+    }
+
+    public void replaceCompletedMinutes(int completedMinutes) {
+        this.completedMinutes = completedMinutes;
     }
 }

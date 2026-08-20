@@ -88,7 +88,14 @@ public class WebPushSubscription {
         return subscription;
     }
 
-    public void refresh(String endpointCiphertext, String p256dhCiphertext, String authCiphertext, Instant expirationTime) {
+    public void refresh(
+            String endpointHash,
+            String endpointCiphertext,
+            String p256dhCiphertext,
+            String authCiphertext,
+            Instant expirationTime
+    ) {
+        this.endpointHash = endpointHash;
         this.endpointCiphertext = endpointCiphertext;
         this.p256dhCiphertext = p256dhCiphertext;
         this.authCiphertext = authCiphertext;

@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface PlanRepository extends JpaRepository<Plan, UUID> {
     List<Plan> findByUserIdAndStatus(UUID userId, Plan.Status status);
+    Optional<Plan> findFirstByUserIdAndStatusOrderByCreatedAtDesc(UUID userId, Plan.Status status);
 
     Optional<Plan> findByIdAndUserId(UUID id, UUID userId);
 }

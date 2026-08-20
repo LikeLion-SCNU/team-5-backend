@@ -23,7 +23,7 @@ public class NotificationPreference {
     private UUID userId;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
+    private boolean enabled = false;
 
     @Column(name = "timezone", nullable = false)
     private String timezone = "Asia/Seoul";
