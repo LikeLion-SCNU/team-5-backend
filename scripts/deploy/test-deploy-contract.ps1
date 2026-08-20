@@ -40,10 +40,10 @@ Assert-True ($dockerfile -match "EXPOSE 8080") "Dockerfile must expose the Sprin
 Assert-True ($dockerfile -match 'ENTRYPOINT \["java".*"-jar", "/app/app\.jar"\]') "Dockerfile must run the boot jar"
 Assert-True ($dockerfile -notmatch "python|pip|requirements\.txt|uvicorn|main:app") "Dockerfile must not contain the removed FastAPI placeholder"
 
-Assert-True ($dockerignore -match "(?m)^\.git$") ".dockerignore must exclude git metadata"
-Assert-True ($dockerignore -match "(?m)^build$") ".dockerignore must exclude local build output"
-Assert-True ($dockerignore -match "(?m)^\.env$") ".dockerignore must exclude dotenv secrets"
-Assert-True ($dockerignore -match "(?m)^\.env\.\*$") ".dockerignore must exclude dotenv variants"
+Assert-True ($dockerignore -match "(?m)^\.git\r?$") ".dockerignore must exclude git metadata"
+Assert-True ($dockerignore -match "(?m)^build\r?$") ".dockerignore must exclude local build output"
+Assert-True ($dockerignore -match "(?m)^\.env\r?$") ".dockerignore must exclude dotenv secrets"
+Assert-True ($dockerignore -match "(?m)^\.env\.\*\r?$") ".dockerignore must exclude dotenv variants"
 
 Assert-True ($compose -match 'image: naeil-bank-backend:\$\{APP_VERSION:\?APP_VERSION is required\}') "Compose must fail closed when APP_VERSION is absent"
 Assert-True ($compose -match '"\$\{APP_PORT:\?APP_PORT is required\}:8080"') "Compose must map explicit external branch port to internal 8080"
