@@ -86,6 +86,7 @@ class MediaFormatIntegrationTest {
                             .header(HttpHeaders.AUTHORIZATION, accessToken(userId)))
                     .andExpect(request().asyncStarted())
                     .andReturn();
+            pending.getAsyncResult(5000);
             mockMvc.perform(asyncDispatch(pending))
                     .andExpect(status().isOk())
                     .andExpect(header().string(HttpHeaders.CONTENT_TYPE, format.contentType()))

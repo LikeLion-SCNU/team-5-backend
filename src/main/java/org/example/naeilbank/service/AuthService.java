@@ -9,6 +9,10 @@ import org.example.naeilbank.domain.auth.dto.AuthDtos.LogoutRequest;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.RefreshRequest;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.TokenResponse;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.UserSummary;
+import org.example.naeilbank.domain.auth.dto.AuthDtos.ResendVerificationRequest;
+import org.example.naeilbank.domain.auth.dto.AuthDtos.VerifyEmailRequest;
+import org.example.naeilbank.domain.auth.dto.AuthDtos.VerifyEmailResponse;
+import org.example.naeilbank.domain.auth.service.EmailVerificationService;
 import org.example.naeilbank.domain.auth.service.RefreshTokenService;
 import org.example.naeilbank.entity.User;
 import org.example.naeilbank.global.exception.AuthException;
@@ -29,6 +33,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final KakaoOAuthService kakaoOAuthService;
     private final RefreshTokenService refreshTokenService;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public JoinResponse join(JoinRequest joinRequest) {
@@ -37,13 +42,41 @@ public class AuthService {
         }
 
         String encodedPassword = passwordEncoder.encode(joinRequest.password());
-        User user = User.local(joinRequest.email(), encodedPassword);
+        User user = User.local(joinRequest.email(), encodedPassword, joinRequest.name().trim());
+        boolean verificationRequired = emailVerificationService.isEnabled();
+        if (verificationRequired) {
+            emailVerificationService.issueAndSend(user);
+        } else {
+            user.markEmailVerified();
+        }
         userRepository.save(user);
 
         return new JoinResponse(
                 user.getId(),
-                "회원가입이 완료되었습니다."
+                verificationRequired
+                        ? "인증 코드를 이메일로 보냈습니다. 10분 안에 입력해주세요."
+                        : "회원가입이 완료되었습니다.",
+                verificationRequired
         );
+    }
+
+    @Transactional
+    public VerifyEmailResponse verifyEmail(VerifyEmailRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
+        emailVerificationService.verify(user, request.code());
+        return new VerifyEmailResponse(true, "이메일 인증이 완료되었습니다.");
+    }
+
+    @Transactional
+    public VerifyEmailResponse resendVerification(ResendVerificationRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new AuthException(ErrorCode.USER_NOT_FOUND));
+        if (user.isEmailVerified()) {
+            return new VerifyEmailResponse(true, "이미 인증된 계정입니다. 로그인해주세요.");
+        }
+        emailVerificationService.issueAndSend(user);
+        return new VerifyEmailResponse(false, "인증 코드를 다시 보냈습니다.");
     }
 
     @Transactional
@@ -52,6 +85,10 @@ public class AuthService {
                 .filter(found -> found.getPassword() != null)
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPassword()))
                 .orElseThrow(() -> new AuthException(ErrorCode.INVALID_CREDENTIALS));
+
+        if (emailVerificationService.isEnabled() && !user.isEmailVerified()) {
+            throw new AuthException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
 
         return refreshTokenService.issueTokenPair(user);
     }
@@ -115,7 +152,7 @@ public class AuthService {
     }
 
     private UserSummary userSummary(User user) {
-        return new UserSummary(user.getId(), user.getEmail(), "ROLE_" + user.getRole().name());
+        return new UserSummary(user.getId(), user.getEmail(), user.getName(), "ROLE_" + user.getRole().name());
     }
 
 }

@@ -36,6 +36,8 @@ class AuthServiceKakaoTest {
     KakaoOAuthService kakaoOAuthService;
     @Mock
     RefreshTokenService refreshTokenService;
+    @Mock
+    org.example.naeilbank.domain.auth.service.EmailVerificationService emailVerificationService;
 
     @Test
     void kakaoLoginCreatesUserByKakaoIdAndFallbackEmail() {
@@ -125,7 +127,7 @@ class AuthServiceKakaoTest {
     }
 
     private AuthService authService() {
-        return new AuthService(userRepository, passwordEncoder, kakaoOAuthService, refreshTokenService);
+        return new AuthService(userRepository, passwordEncoder, kakaoOAuthService, refreshTokenService, emailVerificationService);
     }
 
     private TokenResponse tokenResponse(String email) {
@@ -134,7 +136,7 @@ class AuthServiceKakaoTest {
                 "refresh-token",
                 "Bearer",
                 1800,
-                new UserSummary(UUID.randomUUID(), email, "ROLE_USER")
+                new UserSummary(UUID.randomUUID(), email, "카카오사용자", "ROLE_USER")
         );
     }
 }
