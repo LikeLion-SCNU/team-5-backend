@@ -83,6 +83,15 @@ GET /ledger/statements/2026-08-22 응답:
 | POST | `/api/admin/rules` · `/api/admin/rules/{id}/versions` | 환산 규칙 신규 등록 및 새 버전 생성 (관리자) |
 | PUT | `/api/admin/rules/{id}/activation` | `expectedVersion` 기반 규칙 활성/비활성 전환 (관리자) |
 
+`V4__version_evidence_sources_and_rules.sql`은 개발 DB에 이미 존재하는 출처·규칙 행을
+그 자리에서 버전 1로 승격한다. 새 논문이나 환산 계수를 시드하지 않으므로 빈 DB는 빈
+카탈로그로 유지되며, 운영 정본 대신 임의 값을 만들지 않는다.
+
+활성 전환은 트랜잭션 커밋 이후 생성되는 신규 계산에만 적용한다. 기존
+`ledger_entries.rule_id`는 변경하지 않으며 과거 근거 상세는 비활성 버전도 ID로 계속
+조회할 수 있다. 출처 목록은 논리 계보별 최신 활성 버전만 노출하고, 이전 버전은 당시
+활성 규칙 및 과거 원장의 근거 해석을 위해 ID 조회를 유지한다.
+
 ## §5. 흑자 전환 플랜 (F-IMUMQN)
 
 | 메서드 | 경로 | 설명 |

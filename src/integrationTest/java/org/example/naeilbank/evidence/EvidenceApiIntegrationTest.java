@@ -110,6 +110,12 @@ class EvidenceApiIntegrationTest extends EvidenceIntegrationSupport {
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         UUID sourceV2Id = UUID.fromString(sourceV2.get("id").asText());
 
+        mockMvc.perform(get("/api/v1/sources")
+                        .header(HttpHeaders.AUTHORIZATION, token(userId, "USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sources.length()").value(1))
+                .andExpect(jsonPath("$.sources[0].id").value(sourceV2Id.toString()));
+
         JsonNode ruleV2 = objectMapper.readTree(mockMvc.perform(post(
                                 "/api/admin/rules/{id}/versions", ruleV1Id)
                         .header(HttpHeaders.AUTHORIZATION, token(adminId, "ADMIN"))

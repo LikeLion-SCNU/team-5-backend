@@ -64,7 +64,7 @@ public class EvidenceService {
 
     @Transactional
     public SourceView createSource(UUID adminId, CreateSourceRequest request) {
-        SourceContent content = validated(request.content());
+        SourceContent content = EvidencePolicy.validate(request.content());
         Instant now = Instant.now(clock);
         Source saved = sourceRepository.saveAndFlush(Source.create(content.title(), content.authors(),
                 content.journal(), content.publicationYear(), content.doiUrl(), content.summaryKo(),
@@ -108,19 +108,19 @@ public class EvidenceService {
 
     @Transactional
     public RuleView createRule(UUID adminId, CreateRuleRequest request) {
-        RuleContent content = validated(request.content());
+        RuleContent content = EvidencePolicy.validate(request.content());
         Source source = requiredActiveSource(content.sourceId());
         Instant now = Instant.now(clock);
         ConversionRule saved = ruleRepository.saveAndFlush(ConversionRule.create(content.habitType(),
-                content.label(), json(content), content.minutesDelta(), content.unit(), source.getId(),
-                request.active(), now));
+                content.label(), EvidencePolicy.json(objectMapper, content), content.minutesDelta(),
+                content.unit(), source.getId(), request.active(), now));
         auditRule(adminId, "RULE_CREATED", saved);
         return toRuleView(saved);
     }
 
     @Transactional
     public RuleView versionRule(UUID adminId, UUID ruleId, VersionRuleRequest request) {
-        RuleContent content = validated(request.content());
+        RuleContent content = EvidencePolicy.validate(request.content());
         requiredActiveSource(content.sourceId());
         List<ConversionRule> family = lockedRuleFamily(ruleId);
         ConversionRule previous = ruleMember(family, ruleId);
@@ -134,8 +134,8 @@ public class EvidenceService {
             ruleRepository.saveAndFlush(previous);
         }
         ConversionRule saved = ruleRepository.saveAndFlush(ConversionRule.nextVersion(previous, next,
-                content.habitType(), content.label(), json(content), content.minutesDelta(), content.unit(),
-                content.sourceId(), request.active(), now));
+                content.habitType(), content.label(), EvidencePolicy.json(objectMapper, content),
+                content.minutesDelta(), content.unit(), content.sourceId(), request.active(), now));
         auditRule(adminId, "RULE_VERSIONED", saved);
         return toRuleView(saved);
     }
@@ -159,38 +159,6 @@ public class EvidenceService {
         ConversionRule saved = ruleRepository.saveAndFlush(rule);
         auditRule(adminId, "RULE_ACTIVATION_CHANGED", saved);
         return toRuleView(saved);
-    }
-
-    private SourceContent validated(SourceContent content) {
-        validateHttps(content.doiUrl());
-        return content;
-    }
-
-    private RuleContent validated(RuleContent content) {
-        if (!content.condition().isObject() || content.minutesDelta() == 0) {
-            throw new AuthException(ErrorCode.INVALID_EVIDENCE_CONTENT);
-        }
-        return content;
-    }
-
-    private void validateHttps(String rawUrl) {
-        try {
-            URI uri = new URI(rawUrl);
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null
-                    || uri.getUserInfo() != null || uri.getFragment() != null) {
-                throw new AuthException(ErrorCode.INVALID_EVIDENCE_URL);
-            }
-        } catch (URISyntaxException e) {
-            throw new AuthException(ErrorCode.INVALID_EVIDENCE_URL);
-        }
-    }
-
-    private String json(RuleContent content) {
-        try {
-            return objectMapper.writeValueAsString(content.condition());
-        } catch (JsonProcessingException e) {
-            throw new AuthException(ErrorCode.INVALID_EVIDENCE_CONTENT);
-        }
     }
 
     private RuleView toRuleView(ConversionRule rule) {
@@ -250,11 +218,6 @@ public class EvidenceService {
 
     private ConversionRule requiredRule(UUID id) {
         return ruleRepository.findById(id)
-                .orElseThrow(() -> new AuthException(ErrorCode.EVIDENCE_NOT_FOUND));
-    }
-
-    private ConversionRule lockedRule(UUID id) {
-        return ruleRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new AuthException(ErrorCode.EVIDENCE_NOT_FOUND));
     }
 
