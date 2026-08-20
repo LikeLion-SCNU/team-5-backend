@@ -15,12 +15,17 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class EmailVerificationService {
     private static final Logger log = LoggerFactory.getLogger(EmailVerificationService.class);
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
+    private static final int MAX_VERIFY_ATTEMPTS = 5;
     private static final SecureRandom RANDOM = new SecureRandom();
+    // 코드 무차별 대입 방지. 단일 인스턴스 배포 전제의 인메모리 카운터(FaceSimulationInterlock과 동일 전제).
+    private final Map<String, Integer> failedAttempts = new ConcurrentHashMap<>();
 
     private final boolean enabled;
     private final String fromAddress;
@@ -45,6 +50,7 @@ public class EmailVerificationService {
 
     /** 코드를 발급해 사용자에 기록하고 메일을 보낸다. 발송 실패는 가입을 막지 않는다(재전송 가능). */
     public void issueAndSend(User user) {
+        failedAttempts.remove(user.getEmail());
         String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
         user.issueEmailVerification(code, Instant.now(clock).plus(CODE_TTL));
         send(user.getEmail(), user.getName(), code);
@@ -58,11 +64,17 @@ public class EmailVerificationService {
             throw new AuthException(ErrorCode.VERIFICATION_NOT_PENDING);
         }
         if (Instant.now(clock).isAfter(user.getEmailVerificationExpiresAt())) {
+            failedAttempts.remove(user.getEmail());
+            throw new AuthException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
+        if (failedAttempts.getOrDefault(user.getEmail(), 0) >= MAX_VERIFY_ATTEMPTS) {
             throw new AuthException(ErrorCode.VERIFICATION_CODE_EXPIRED);
         }
         if (!user.getEmailVerificationCode().equals(code)) {
+            failedAttempts.merge(user.getEmail(), 1, Integer::sum);
             throw new AuthException(ErrorCode.INVALID_VERIFICATION_CODE);
         }
+        failedAttempts.remove(user.getEmail());
         user.markEmailVerified();
     }
 

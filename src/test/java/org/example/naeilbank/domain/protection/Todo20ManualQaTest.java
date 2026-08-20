@@ -2,6 +2,7 @@ package org.example.naeilbank.domain.protection;
 
 import org.example.naeilbank.domain.ledger.LedgerDtos.GuardedBalance;
 import org.example.naeilbank.domain.ledger.LedgerService;
+import org.example.naeilbank.domain.protection.ProtectionCopyPolicy;
 import org.example.naeilbank.domain.model.entity.BalanceViewEvent;
 import org.example.naeilbank.domain.model.entity.ProtectionProposal;
 import org.example.naeilbank.domain.model.repository.BalanceViewEventRepository;
@@ -78,7 +79,7 @@ class Todo20ManualQaTest {
         when(events.findByUserIdAndIdempotencyKey(eq(userId), any())).thenReturn(Optional.empty());
 
         ProtectionService protection = new ProtectionService(proposals, events, users, clock);
-        LedgerService ledgerService = new LedgerService(ledger, views, users, protection, clock);
+        LedgerService ledgerService = new LedgerService(ledger, views, users, protection, new ProtectionCopyPolicy(), clock);
 
         GuardedBalance ninth = null;
         for (int view = 1; view <= 9; view++) {

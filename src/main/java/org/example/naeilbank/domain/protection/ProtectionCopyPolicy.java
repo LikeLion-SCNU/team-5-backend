@@ -17,18 +17,18 @@ public class ProtectionCopyPolicy {
 
     public String balanceText(boolean protectionMode, long balanceMinutes) {
         if (protectionMode) {
-            return "Your balance is ready when you are.";
+            return "잔고는 마음이 준비되었을 때 확인하실 수 있어요.";
         }
-        return "Current balance: " + balanceMinutes + " minutes";
+        return "현재 잔고: " + balanceMinutes + "분";
     }
 
     public String planTitle(boolean protectionMode, String standardTitle) {
-        return protectionMode ? "Your next-step plan" : standardTitle;
+        return protectionMode ? "나의 다음 걸음 플랜" : standardTitle;
     }
 
     public String morningStatement(boolean protectionMode) {
         return protectionMode
-                ? "Your morning check-in is ready when you are."
-                : "Your morning statement is ready.";
+                ? "아침 체크인이 준비되어 있어요. 편할 때 확인해 주세요."
+                : "아침 명세서가 도착했습니다.";
     }
 }
