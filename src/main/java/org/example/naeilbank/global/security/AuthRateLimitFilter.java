@@ -34,7 +34,10 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return !path.equals("/api/v1/auth/login")
                 && !path.equals("/api/v1/auth/refresh")
-                && !path.equals("/api/v1/auth/kakao");
+                && !path.equals("/api/v1/auth/kakao")
+                && !path.equals("/api/v1/auth/join")
+                && !path.equals("/api/v1/auth/email/verify")
+                && !path.equals("/api/v1/auth/email/resend");
     }
 
     @Override

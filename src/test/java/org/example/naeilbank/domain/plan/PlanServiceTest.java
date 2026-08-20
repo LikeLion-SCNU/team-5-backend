@@ -100,7 +100,7 @@ class PlanServiceTest {
                 .containsExactly(30, 20);
         assertThat(response.actions().getFirst().ruleVersion()).isEqualTo(4);
         assertThat(response.actions().getFirst().sourceId()).isEqualTo(thirty.getSourceId());
-        assertThat(response.advisoryCopy()).contains("never changes the ledger");
+        assertThat(response.advisoryCopy()).contains("원장(잔고)에는 어떤 영향도");
     }
 
     @Test
@@ -254,7 +254,7 @@ class PlanServiceTest {
                 "ruleMinutes":%d,"repetitions":%d}]
                 """.formatted(rule.getHabitType().name(), minutes, rule.getSourceId(), rule.getId(),
                 rule.getLogicalKey(), rule.getVersionNumber(), rule.getUnit(), rule.getMinutesDelta(), repetitions);
-        return withId(Plan.proposed(owner, copy.planTitle(false, "Optional weekly advisory plan"), snapshot,
+        return withId(Plan.proposed(owner, copy.planTitle(false, "주간 회복 플랜 (참고용)"), snapshot,
                 minutes, Instant.parse("2026-08-21T00:00:00Z")));
     }
 

@@ -82,6 +82,7 @@ app:
       - Authorization
       - Content-Type
       - If-None-Match
+      - Idempotency-Key
     exposed-headers:
       - Location
       - ETag
