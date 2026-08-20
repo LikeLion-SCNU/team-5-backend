@@ -17,7 +17,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,7 +66,7 @@ abstract class FaceSimulationRaceIntegrationSupport {
                 insert into consents
                     (user_id, purpose, granted, granted_at, consent_version, text_hash, version)
                 values (?, 'FACE_AI', true, ?, 1, ?, 0)
-                """, userId, Instant.parse("2026-08-20T00:00:00Z"), "f".repeat(64));
+                """, userId, OffsetDateTime.parse("2026-08-20T00:00:00Z"), "f".repeat(64));
     }
 
     UUID uploadFaceInput(UUID userId) throws Exception {

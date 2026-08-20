@@ -24,7 +24,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -254,7 +254,7 @@ class FaceSimulationApiIntegrationTest {
                         values (?, 'FACE_AI', true, ?, 1, ?, 0)
                         """,
                 userId,
-                Instant.parse("2026-08-20T00:00:00Z"),
+                OffsetDateTime.parse("2026-08-20T00:00:00Z"),
                 "f".repeat(64)
         );
     }

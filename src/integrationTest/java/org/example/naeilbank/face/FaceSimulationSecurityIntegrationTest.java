@@ -23,7 +23,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -140,7 +140,7 @@ class FaceSimulationSecurityIntegrationTest {
                 insert into consents
                     (user_id, purpose, granted, granted_at, consent_version, text_hash, version)
                 values (?, 'FACE_AI', true, ?, 1, ?, 0)
-                """, userId, Instant.parse("2026-08-20T00:00:00Z"), "f".repeat(64));
+                """, userId, OffsetDateTime.parse("2026-08-20T00:00:00Z"), "f".repeat(64));
     }
 
     private int simulationCount(UUID userId) {
