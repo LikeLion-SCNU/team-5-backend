@@ -12,8 +12,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -84,7 +84,7 @@ abstract class LedgerIntegrationSupport {
                 values (?, ?, 'sleep', ?, ?, ?, ?, ?)
                 returning id
                 """, Long.class, user, date, minutes, rule, refType, UUID.randomUUID(),
-                Instant.parse(date + "T03:00:00Z"));
+                date.atTime(3, 0).atOffset(ZoneOffset.UTC));
     }
 
     UUID healthEvent(UUID user, LocalDate date) {
