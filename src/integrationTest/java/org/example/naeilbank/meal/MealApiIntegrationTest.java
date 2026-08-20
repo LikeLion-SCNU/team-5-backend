@@ -4,6 +4,7 @@ import org.example.naeilbank.domain.conversion.ConversionUnit;
 import org.example.naeilbank.domain.conversion.HabitCategory;
 import org.example.naeilbank.domain.meal.MealAnalysisClient;
 import org.example.naeilbank.domain.meal.MealAnalysisContract;
+import org.example.naeilbank.domain.meal.MealEligibility;
 import org.example.naeilbank.global.exception.AuthException;
 import org.example.naeilbank.global.exception.ErrorCode;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
@@ -196,7 +197,7 @@ class MealApiIntegrationTest {
         grant(userId, "MEAL_AI");
         UUID mediaId = media(userId, 'b');
         rule("food", "per_serving", 24);
-        when(mealAnalysisClient.analyze(eq("image/png"), any())).thenReturn(analysis("rice"));
+        when(mealAnalysisClient.analyze(eq("image/png"), any())).thenReturn(analysis("rice", MealEligibility.NEUTRAL));
 
         String created = mockMvc.perform(post("/api/v1/meals")
                         .header(HttpHeaders.AUTHORIZATION, token(userId))
@@ -231,12 +232,17 @@ class MealApiIntegrationTest {
     }
 
     private MealAnalysisContract.AnalyzedMeal analysis(String foodName) {
+        return analysis(foodName, MealEligibility.FRUIT_OR_VEGETABLE);
+    }
+
+    private MealAnalysisContract.AnalyzedMeal analysis(String foodName, MealEligibility eligibility) {
         return new MealAnalysisContract.AnalyzedMeal(List.of(new MealAnalysisContract.AnalyzedItem(
                 foodName,
                 "1 serving",
                 HabitCategory.FOOD,
                 ConversionUnit.PER_SERVING,
-                BigDecimal.ONE
+                BigDecimal.ONE,
+                eligibility
         )));
     }
 
