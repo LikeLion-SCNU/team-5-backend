@@ -3,7 +3,8 @@ package org.example.naeilbank.domain.ledger;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.example.naeilbank.controller.LedgerController;
-import org.example.naeilbank.domain.ledger.LedgerDtos.BalanceResponse;
+import org.example.naeilbank.domain.ledger.LedgerDtos.BalanceSnapshot;
+import org.example.naeilbank.domain.ledger.LedgerDtos.GuardedBalance;
 import org.example.naeilbank.domain.ledger.LedgerDtos.DailyTrendPoint;
 import org.example.naeilbank.domain.ledger.LedgerDtos.LedgerLine;
 import org.example.naeilbank.domain.ledger.LedgerDtos.StatementDay;
@@ -21,6 +22,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,7 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class LedgerApiContractTest {
     private final LedgerQueryService service = mock(LedgerQueryService.class);
-    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new LedgerController(service))
+    private final LedgerService ledgerService = mock(LedgerService.class);
+    private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new LedgerController(service, ledgerService))
             .setMessageConverters(new MappingJackson2HttpMessageConverter(
                     new com.fasterxml.jackson.databind.ObjectMapper()
                             .registerModule(new JavaTimeModule())
@@ -43,8 +47,10 @@ public class LedgerApiContractTest {
 
     @Test
     void balanceEndpointReturnsCanonicalTotalsAndPreviousDayDelta() throws Exception {
-        when(service.balance(userId)).thenReturn(new BalanceResponse(42, -7,
+        when(service.balance(userId)).thenReturn(new BalanceSnapshot(42, -7,
                 LocalDate.of(2026, 8, 20), "Asia/Seoul"));
+        when(ledgerService.balance(eq(userId), any())).thenReturn(new GuardedBalance(
+                42, false, "Current balance: 42 minutes", null, false));
 
         mvc.perform(get("/api/v1/ledger/balance").principal(auth))
                 .andExpect(status().isOk())

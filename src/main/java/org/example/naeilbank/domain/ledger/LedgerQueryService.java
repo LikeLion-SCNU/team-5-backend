@@ -1,6 +1,6 @@
 package org.example.naeilbank.domain.ledger;
 
-import org.example.naeilbank.domain.ledger.LedgerDtos.BalanceResponse;
+import org.example.naeilbank.domain.ledger.LedgerDtos.BalanceSnapshot;
 import org.example.naeilbank.domain.ledger.LedgerDtos.DailyTrendPoint;
 import org.example.naeilbank.domain.ledger.LedgerDtos.LedgerLine;
 import org.example.naeilbank.domain.ledger.LedgerDtos.StatementDay;
@@ -49,10 +49,10 @@ public class LedgerQueryService {
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public BalanceResponse balance(UUID userId) {
+    public BalanceSnapshot balance(UUID userId) {
         ZoneId zone = timezoneResolver.resolve();
         LocalDate today = LocalDate.now(clock.withZone(zone));
-        return new BalanceResponse(queryRepository.balanceMinutes(userId),
+        return new BalanceSnapshot(queryRepository.balanceMinutes(userId),
                 queryRepository.dailyNet(userId, today.minusDays(1)), today, zone.getId());
     }
 

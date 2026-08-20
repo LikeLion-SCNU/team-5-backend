@@ -23,7 +23,7 @@ public class NotificationPreference {
     private UUID userId;
 
     @Column(name = "enabled", nullable = false)
-    private boolean enabled = true;
+    private boolean enabled = false;
 
     @Column(name = "timezone", nullable = false)
     private String timezone = "Asia/Seoul";
@@ -40,4 +40,20 @@ public class NotificationPreference {
 
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
+
+    public static NotificationPreference create(UUID userId, boolean enabled, String timezone, LocalTime morningTime, Instant now) {
+        NotificationPreference preference = new NotificationPreference();
+        preference.userId = userId;
+        preference.enabled = enabled;
+        preference.timezone = timezone;
+        preference.morningTime = morningTime;
+        preference.createdAt = now;
+        return preference;
+    }
+
+    public void update(boolean enabled, String timezone, LocalTime morningTime) {
+        this.enabled = enabled;
+        this.timezone = timezone;
+        this.morningTime = morningTime;
+    }
 }
