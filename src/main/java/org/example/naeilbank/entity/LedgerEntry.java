@@ -45,4 +45,20 @@ public class LedgerEntry {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    public static LedgerEntry posted(UUID userId, LocalDate entryDate,
+                                     ConversionRule.HabitType habitType, int minutesDelta,
+                                     UUID ruleId, String referenceType, UUID referenceId,
+                                     Instant createdAt) {
+        LedgerEntry entry = new LedgerEntry();
+        entry.userId = userId;
+        entry.entryDate = entryDate;
+        entry.habitType = habitType;
+        entry.minutesDelta = minutesDelta;
+        entry.ruleId = ruleId;
+        entry.referenceType = referenceType;
+        entry.referenceId = referenceId;
+        entry.createdAt = createdAt;
+        return entry;
+    }
 }

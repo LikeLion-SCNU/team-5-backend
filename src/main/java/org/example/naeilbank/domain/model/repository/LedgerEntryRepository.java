@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface LedgerEntryRepository extends Repository<LedgerEntry, Long> {
     LedgerEntry save(LedgerEntry entry);
 
+    LedgerEntry saveAndFlush(LedgerEntry entry);
+
     Optional<LedgerEntry> findByIdAndUserId(Long id, UUID userId);
 
     List<LedgerEntry> findByUserIdAndEntryDateOrderById(UUID userId, LocalDate entryDate);

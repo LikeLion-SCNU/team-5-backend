@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface HealthDailyRepository extends JpaRepository<HealthDaily, UUID> {
     Optional<HealthDaily> findByUserIdAndRecordDate(UUID userId, LocalDate recordDate);
+
+    boolean existsByIdAndUserIdAndRecordDate(UUID id, UUID userId, LocalDate recordDate);
 }

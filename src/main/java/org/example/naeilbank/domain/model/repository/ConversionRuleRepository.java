@@ -18,6 +18,17 @@ public interface ConversionRuleRepository extends JpaRepository<ConversionRule, 
 
     boolean existsBySourceIdAndActiveTrue(UUID sourceId);
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("""
+            select r from ConversionRule r
+            where r.habitType = :habitType and r.unit = :unit and r.active = true
+            order by r.versionNumber desc, r.logicalKey asc
+            """)
+    List<ConversionRule> findActiveForConversion(
+            @Param("habitType") ConversionRule.HabitType habitType,
+            @Param("unit") String unit
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from ConversionRule r where r.id = :id")
     Optional<ConversionRule> findByIdForUpdate(@Param("id") UUID id);

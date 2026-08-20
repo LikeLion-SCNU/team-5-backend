@@ -1,0 +1,87 @@
+name: Todo10 Canonical Dev Golden Vector
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: todo10-canonical-dev-golden-vector-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  canonical-dev-golden-vector:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate canonical vector tools
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/db/export-canonical-dev-vectors.sh
+
+      - name: Prepare SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$SERVER_HOST" || { echo 'MISSING_PREREQUISITE SERVER_HOST' >&2; exit 2; }
+          test -n "$SERVER_SSH_KEY" || { echo 'MISSING_PREREQUISITE SERVER_SSH_KEY' >&2; exit 2; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          timeout 15s ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
+      - name: Run canonical dev golden-vector gate
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          set -Eeuo pipefail
+          tmp_dir="$(mktemp -d)"
+          payload_path="$tmp_dir/canonical-dev-vectors.jsonl"
+          cleanup() {
+            rm -rf "$tmp_dir"
+          }
+          trap cleanup EXIT HUP INT TERM
+
+          timeout 15s ssh -o BatchMode=yes -o ConnectTimeout=10 "ubuntu@$SERVER_HOST" \
+            'DB_NAME=naeil_bank_dev CANONICAL_VECTOR_TIMEOUT_SECONDS=15 bash -s' \
+            < scripts/db/export-canonical-dev-vectors.sh \
+            > "$payload_path"
+
+          vector_count="$(wc -l < "$payload_path" | tr -d ' ')"
+          test "$vector_count" -gt 0 || { echo 'EMPTY_CANONICAL_VECTOR_SET' >&2; exit 3; }
+          vector_sha256="$(sha256sum "$payload_path" | awk '{print $1}')"
+          echo "vector_count=$vector_count"
+          echo "vector_sha256=$vector_sha256"
+
+          CANONICAL_DEV_VECTOR_PATH="$payload_path" REQUIRE_CANONICAL_DEV_VECTORS=true \
+            ./gradlew --no-daemon test --tests org.example.naeilbank.domain.conversion.CanonicalDevGoldenVectorTest
+
+          result_xml='build/test-results/test/TEST-org.example.naeilbank.domain.conversion.CanonicalDevGoldenVectorTest.xml'
+          grep -Eq 'tests="[1-9][0-9]*"' "$result_xml"
+          grep -Eq 'skipped="0"' "$result_xml"
+          grep -Eq 'failures="0"' "$result_xml"
+          grep -Eq 'errors="0"' "$result_xml"
+          echo 'canonical_vector_test=pass'
+
+      - name: Cleanup runner credentials
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/id_ed25519

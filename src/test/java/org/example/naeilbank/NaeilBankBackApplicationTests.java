@@ -1,10 +1,13 @@
 package org.example.naeilbank;
 
 import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
+import org.example.naeilbank.domain.conversion.ConversionPostingRepository;
 import org.example.naeilbank.domain.model.repository.AuditEventRepository;
 import org.example.naeilbank.domain.model.repository.ConsentRepository;
 import org.example.naeilbank.domain.model.repository.ConversionRuleRepository;
+import org.example.naeilbank.domain.model.repository.HealthDailyRepository;
 import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
+import org.example.naeilbank.domain.model.repository.MealItemRepository;
 import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
 import org.example.naeilbank.domain.model.repository.SourceRepository;
 import org.example.naeilbank.repository.UserRepository;
@@ -52,6 +55,15 @@ class NaeilBankBackApplicationTests {
 
     @MockBean
     private LedgerEntryRepository ledgerEntryRepository;
+
+    @MockBean
+    private ConversionPostingRepository conversionPostingRepository;
+
+    @MockBean
+    private HealthDailyRepository healthDailyRepository;
+
+    @MockBean
+    private MealItemRepository mealItemRepository;
 
     @Test
     void contextLoads() {

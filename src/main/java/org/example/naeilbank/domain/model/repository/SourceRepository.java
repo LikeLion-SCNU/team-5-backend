@@ -25,6 +25,10 @@ public interface SourceRepository extends JpaRepository<Source, UUID> {
             """)
     List<Source> findLatestActiveVersions();
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select s from Source s where s.id = :id and s.active = true")
+    Optional<Source> findByIdAndActiveTrueForShare(@Param("id") UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Source s where s.id = :id")
     Optional<Source> findByIdForUpdate(@Param("id") UUID id);

@@ -124,9 +124,9 @@ public class EvidenceService {
     @Transactional
     public RuleView versionRule(UUID adminId, UUID ruleId, VersionRuleRequest request) {
         RuleContent content = EvidencePolicy.validate(request.content());
-        requiredActiveSource(content.sourceId());
         List<ConversionRule> family = lockedRuleFamily(ruleId);
         ConversionRule previous = ruleMember(family, ruleId);
+        requiredActiveSource(content.sourceId());
         requireVersion(previous.resourceVersion(), request.expectedVersion());
         if (!family.get(family.size() - 1).getId().equals(ruleId)) {
             throw new AuthException(ErrorCode.EVIDENCE_VERSION_CONFLICT);
@@ -148,12 +148,11 @@ public class EvidenceService {
 
     @Transactional
     public RuleView activateRule(UUID adminId, UUID ruleId, ActivationRequest request) {
-        ConversionRule candidate = requiredRule(ruleId);
-        if (request.active()) {
-            requiredActiveSource(candidate.getSourceId());
-        }
         List<ConversionRule> family = lockedRuleFamily(ruleId);
         ConversionRule rule = ruleMember(family, ruleId);
+        if (request.active()) {
+            requiredActiveSource(rule.getSourceId());
+        }
         requireVersion(rule.resourceVersion(), request.expectedVersion());
         if (rule.isActive() == request.active()) {
             return toRuleView(rule);
