@@ -4,8 +4,12 @@ import org.example.naeilbank.domain.model.entity.Plan;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PlanRepository extends JpaRepository<Plan, UUID> {
     List<Plan> findByUserIdAndStatus(UUID userId, Plan.Status status);
+    Optional<Plan> findFirstByUserIdAndStatusOrderByCreatedAtDesc(UUID userId, Plan.Status status);
+
+    Optional<Plan> findByIdAndUserId(UUID id, UUID userId);
 }

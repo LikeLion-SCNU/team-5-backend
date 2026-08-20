@@ -9,11 +9,32 @@ public final class LedgerDtos {
     private LedgerDtos() {
     }
 
-    public record BalanceResponse(
+    public record BalanceSnapshot(
             long balanceMinutes,
             long previousDayDeltaMinutes,
             LocalDate asOfDate,
             String timezone
+    ) {
+    }
+
+    public record GuardedBalance(
+            long balanceMinutes,
+            boolean protectionMode,
+            String displayText,
+            UUID protectionProposalId,
+            boolean protectionSuggested
+    ) {
+    }
+
+    public record BalanceResponse(
+            long balanceMinutes,
+            long previousDayDeltaMinutes,
+            LocalDate asOfDate,
+            String timezone,
+            boolean protectionMode,
+            String displayText,
+            UUID protectionProposalId,
+            boolean protectionSuggested
     ) {
     }
 
@@ -66,5 +87,4 @@ public final class LedgerDtos {
 
     public record TrendResponse(String window, List<? extends TrendPoint> points) {
     }
-
 }

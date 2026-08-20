@@ -42,4 +42,13 @@ public class BalanceViewEvent {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    public static BalanceViewEvent create(UUID userId, long balanceMinutes, String idempotencyKey, Instant now) {
+        BalanceViewEvent event = new BalanceViewEvent();
+        event.userId = userId;
+        event.balanceMinutes = balanceMinutes;
+        event.idempotencyKey = idempotencyKey;
+        event.createdAt = now;
+        return event;
+    }
 }
