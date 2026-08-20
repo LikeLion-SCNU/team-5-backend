@@ -15,11 +15,11 @@ class CanonicalRuleSeedMigrationTest {
         String sql = migrationSql();
 
         assertThat(sql)
-                .contains("('activity', 3, 'per_minute', 'DERIVED')")
-                .contains("('screen_time', -22, 'per_hour', 'MEASURED')")
-                .contains("('sleep', -36, 'per_unit', 'DERIVED')")
-                .contains("('alcohol', -15, 'per_drink', 'DERIVED')")
-                .contains("('food', 18, 'per_serving', 'DERIVED')");
+                .contains("('activity', 3, 'per_minute', 'DERIVED',")
+                .contains("('screen_time', -22, 'per_hour', 'MEASURED',")
+                .contains("('sleep', -36, 'per_unit', 'DERIVED',")
+                .contains("('alcohol', -15, 'per_drink', 'DERIVED',")
+                .contains("('food', 18, 'per_serving', 'DERIVED',");
     }
 
     @Test
