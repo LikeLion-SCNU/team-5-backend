@@ -22,7 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration",
-        "management.endpoints.web.exposure.include=health,info"
+        "management.endpoints.web.exposure.include=health,info",
+        "management.endpoint.health.probes.enabled=false",
+        "management.health.defaults.enabled=false"
 })
 class DevProfileSecurityHealthTest {
 

@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +31,7 @@ class JwtTokenProviderTest {
 
         Claims claims = Jwts.parser()
                 .verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
+                .clock(() -> Date.from(fixedClock.instant()))
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
