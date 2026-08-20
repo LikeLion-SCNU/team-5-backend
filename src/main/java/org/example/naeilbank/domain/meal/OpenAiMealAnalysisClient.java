@@ -23,6 +23,8 @@ public class OpenAiMealAnalysisClient implements MealAnalysisClient {
     private static final String PROMPT = """
             Analyze this meal image for a health ledger draft. Return only JSON matching the schema.
             Use FOOD with PER_SERVING for food and ALCOHOL with PER_DRINK for alcoholic drinks.
+            Set eligibility to FRUIT_OR_VEGETABLE only for an explicit fruit or vegetable serving.
+            Set eligibility to NEUTRAL for every other food and every alcoholic drink.
             Do not include unsupported categories.
             """;
 
@@ -107,13 +109,15 @@ public class OpenAiMealAnalysisClient implements MealAnalysisClient {
         Map<String, Object> item = Map.of(
                 "type", "object",
                 "additionalProperties", false,
-                "required", List.of("food_name", "portion", "category", "unit", "value"),
+                "required", List.of("food_name", "portion", "category", "unit", "value", "eligibility"),
                 "properties", Map.of(
                         "food_name", Map.of("type", "string", "minLength", 1),
                         "portion", Map.of("type", "string"),
                         "category", Map.of("type", "string", "enum", List.of("FOOD", "ALCOHOL")),
                         "unit", Map.of("type", "string", "enum", List.of("PER_SERVING", "PER_DRINK")),
-                        "value", Map.of("type", "number", "exclusiveMinimum", 0, "maximum", 1000)
+                        "value", Map.of("type", "number", "exclusiveMinimum", 0, "maximum", 1000),
+                        "eligibility", Map.of("type", "string",
+                                "enum", List.of("FRUIT_OR_VEGETABLE", "NEUTRAL"))
                 )
         );
         return Map.of(

@@ -41,7 +41,8 @@ public final class MealDtos {
             String portion,
             @NotNull HabitCategory category,
             @NotNull ConversionUnit unit,
-            @NotNull BigDecimal value
+            @NotNull BigDecimal value,
+            MealEligibility eligibility
     ) {
     }
 
@@ -66,6 +67,7 @@ public final class MealDtos {
             HabitCategory category,
             ConversionUnit unit,
             BigDecimal value,
+            MealEligibility eligibility,
             boolean deleted,
             @JsonProperty("user_added") boolean userAdded,
             @JsonProperty("rule_id") UUID ruleId
