@@ -67,6 +67,30 @@ public class Plan {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
+    public static Plan proposed(UUID userId, String title, String actionsJson, int expectedWeeklyMinutes, Instant now) {
+        Plan plan = new Plan();
+        plan.userId = userId;
+        plan.title = title;
+        plan.actionsJson = actionsJson;
+        plan.expectedWeeklyMinutes = expectedWeeklyMinutes;
+        plan.status = Status.proposed;
+        plan.progressDays = 0;
+        plan.createdAt = now;
+        return plan;
+    }
+
+    public void accept(LocalDate startDate, LocalDate endDate, Instant now) {
+        this.status = Status.accepted;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.respondedAt = now;
+    }
+
+    public void reject(Instant now) {
+        this.status = Status.rejected;
+        this.respondedAt = now;
+    }
+
     public enum Status {
         proposed,
         accepted,

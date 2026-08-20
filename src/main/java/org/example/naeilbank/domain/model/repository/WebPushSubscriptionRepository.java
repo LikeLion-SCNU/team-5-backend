@@ -11,4 +11,6 @@ public interface WebPushSubscriptionRepository extends JpaRepository<WebPushSubs
     Optional<WebPushSubscription> findByEndpointHash(String endpointHash);
 
     List<WebPushSubscription> findByUserIdAndActiveTrue(UUID userId);
+
+    Optional<WebPushSubscription> findByIdAndUserId(UUID id, UUID userId);
 }

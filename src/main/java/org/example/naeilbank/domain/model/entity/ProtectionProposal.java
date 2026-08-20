@@ -55,6 +55,25 @@ public class ProtectionProposal {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
+    public static ProtectionProposal proposed(UUID userId, String idempotencyKey, Instant now) {
+        ProtectionProposal proposal = new ProtectionProposal();
+        proposal.userId = userId;
+        proposal.status = Status.proposed;
+        proposal.idempotencyKey = idempotencyKey;
+        proposal.createdAt = now;
+        return proposal;
+    }
+
+    public void accept(Instant now) {
+        this.status = Status.accepted;
+        this.respondedAt = now;
+    }
+
+    public void decline(Instant now) {
+        this.status = Status.declined;
+        this.respondedAt = now;
+    }
+
     public enum Status {
         proposed,
         accepted,

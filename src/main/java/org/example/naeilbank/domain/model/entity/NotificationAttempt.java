@@ -66,6 +66,44 @@ public class NotificationAttempt {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
+    public static NotificationAttempt pending(UUID userId, UUID subscriptionId, LocalDate localDate, Type type, Instant now) {
+        NotificationAttempt attempt = new NotificationAttempt();
+        attempt.userId = userId;
+        attempt.subscriptionId = subscriptionId;
+        attempt.localDate = localDate;
+        attempt.type = type;
+        attempt.status = Status.pending;
+        attempt.attemptCount = 0;
+        attempt.nextAttemptAt = now;
+        attempt.createdAt = now;
+        return attempt;
+    }
+
+    public void markProcessing() {
+        this.status = Status.processing;
+    }
+
+    public void markSent() {
+        this.status = Status.sent;
+        this.nextAttemptAt = null;
+    }
+
+    public void markRetry(Instant nextAttemptAt) {
+        this.status = Status.retry;
+        this.attemptCount++;
+        this.nextAttemptAt = nextAttemptAt;
+    }
+
+    public void markFailed() {
+        this.status = Status.failed;
+        this.nextAttemptAt = null;
+    }
+
+    public void markCancelled() {
+        this.status = Status.cancelled;
+        this.nextAttemptAt = null;
+    }
+
     public enum Type {
         morning_statement,
         plan_reminder,

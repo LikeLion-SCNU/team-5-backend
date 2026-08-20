@@ -66,4 +66,37 @@ public class WebPushSubscription {
 
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
+
+    public static WebPushSubscription create(
+            UUID userId,
+            String endpointHash,
+            String endpointCiphertext,
+            String p256dhCiphertext,
+            String authCiphertext,
+            Instant expirationTime,
+            Instant now
+    ) {
+        WebPushSubscription subscription = new WebPushSubscription();
+        subscription.userId = userId;
+        subscription.endpointHash = endpointHash;
+        subscription.endpointCiphertext = endpointCiphertext;
+        subscription.p256dhCiphertext = p256dhCiphertext;
+        subscription.authCiphertext = authCiphertext;
+        subscription.expirationTime = expirationTime;
+        subscription.active = true;
+        subscription.createdAt = now;
+        return subscription;
+    }
+
+    public void refresh(String endpointCiphertext, String p256dhCiphertext, String authCiphertext, Instant expirationTime) {
+        this.endpointCiphertext = endpointCiphertext;
+        this.p256dhCiphertext = p256dhCiphertext;
+        this.authCiphertext = authCiphertext;
+        this.expirationTime = expirationTime;
+        this.active = true;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
 }

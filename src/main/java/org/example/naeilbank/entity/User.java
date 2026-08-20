@@ -84,4 +84,17 @@ public class User {
     public String getPassword() {
         return passwordHash;
     }
+
+    public void enableProtectionMode() {
+        this.protectionMode = true;
+    }
+
+    public void disableProtectionMode() {
+        this.protectionMode = false;
+    }
+
+    public void changeNotificationPreference(boolean enabled, LocalTime notifyTime) {
+        this.notifyEnabled = enabled;
+        this.notifyTime = notifyTime;
+    }
 }

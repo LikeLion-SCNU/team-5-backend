@@ -49,4 +49,13 @@ public class PlanProgress {
 
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
+
+    public static PlanProgress create(UUID planId, LocalDate progressDate, int completedMinutes, Instant now) {
+        PlanProgress progress = new PlanProgress();
+        progress.planId = planId;
+        progress.progressDate = progressDate;
+        progress.completedMinutes = completedMinutes;
+        progress.createdAt = now;
+        return progress;
+    }
 }

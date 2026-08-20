@@ -57,4 +57,16 @@ public class PlanAction {
 
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
+
+    public static PlanAction create(UUID planId, int position, String actionType, int targetMinutes, UUID sourceId, UUID ruleId, Instant now) {
+        PlanAction action = new PlanAction();
+        action.planId = planId;
+        action.position = position;
+        action.actionType = actionType;
+        action.targetMinutes = targetMinutes;
+        action.sourceId = sourceId;
+        action.ruleId = ruleId;
+        action.createdAt = now;
+        return action;
+    }
 }
