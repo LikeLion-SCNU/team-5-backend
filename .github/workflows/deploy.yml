@@ -64,6 +64,7 @@ jobs:
           VAPID_PUBLIC_KEY: ci-placeholder-vapid-public
           VAPID_PRIVATE_KEY: ci-placeholder-vapid-private
           VAPID_SUBJECT: mailto:ci@example.com
+          WEB_PUSH_ENCRYPTION_KEY: ci-placeholder-web-push-key
           CORS_ORIGINS: http://localhost:5173
           APP_TIMEZONE_DEFAULT_ZONE: Asia/Seoul
           APP_SCHEDULING_MORNING_STATEMENT_CRON: "0 0 8 * * *"
