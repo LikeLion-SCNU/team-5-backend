@@ -75,9 +75,13 @@ GET /ledger/statements/2026-08-22 응답:
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET 🔓 | `/sources/{id}` | 출처 상세 `{title, authors, journal, pub_year, doi_url, summary_ko, limitations_ko}` |
-| GET | `/admin/rules` · POST · PATCH `/admin/rules/{id}` | 환산 규칙 등록·수정·`{is_active:false}` 비활성화 (관리자) |
-| POST · PATCH | `/admin/sources...` | 출처 등록·수정 (관리자) |
+| GET | `/api/v1/sources` · `/api/v1/sources/{id}` | 활성 출처 목록 및 버전 상세 `{logicalKey, versionNumber, title, doiUrl, summaryKo, scopeKo, limitationsKo}` |
+| GET | `/api/v1/rules` · `/api/v1/rules/{id}` | 활성 환산 규칙 목록 및 출처가 포함된 버전 상세 |
+| GET | `/api/v1/ledger/{entryId}/evidence` | 소유자의 과거 원장 항목에서 당시 `rule_id → source_id` 근거 조회 |
+| POST | `/api/admin/sources` · `/api/admin/sources/{id}/versions` | 출처 신규 등록 및 내용 덮어쓰기 없는 새 버전 생성 (관리자) |
+| PUT | `/api/admin/sources/{id}/activation` | `expectedVersion` 기반 출처 활성/비활성 전환 (관리자) |
+| POST | `/api/admin/rules` · `/api/admin/rules/{id}/versions` | 환산 규칙 신규 등록 및 새 버전 생성 (관리자) |
+| PUT | `/api/admin/rules/{id}/activation` | `expectedVersion` 기반 규칙 활성/비활성 전환 (관리자) |
 
 ## §5. 흑자 전환 플랜 (F-IMUMQN)
 

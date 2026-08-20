@@ -49,6 +49,30 @@ public class AuditAppendService {
         ));
     }
 
+    public void appendEvidenceMutation(
+            UUID adminId,
+            String action,
+            UUID subjectId,
+            UUID logicalKey,
+            int versionNumber,
+            boolean active,
+            long resourceVersion
+    ) {
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("action", action);
+        details.put("logicalKey", logicalKey);
+        details.put("versionNumber", versionNumber);
+        details.put("active", active);
+        details.put("resourceVersion", resourceVersion);
+        auditEventRepository.save(new AuditEvent(
+                adminId,
+                "EVIDENCE_MUTATED",
+                action.startsWith("SOURCE_") ? "SOURCE" : "CONVERSION_RULE",
+                subjectId,
+                writeJson(details)
+        ));
+    }
+
     private ConsentReplay toConsentReplay(AuditEvent event) {
         try {
             JsonNode detail = objectMapper.readTree(event.getDetailJson());

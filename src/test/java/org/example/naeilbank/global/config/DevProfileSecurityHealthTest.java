@@ -3,7 +3,10 @@ package org.example.naeilbank.global.config;
 import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
 import org.example.naeilbank.domain.model.repository.AuditEventRepository;
 import org.example.naeilbank.domain.model.repository.ConsentRepository;
+import org.example.naeilbank.domain.model.repository.ConversionRuleRepository;
+import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
 import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
+import org.example.naeilbank.domain.model.repository.SourceRepository;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.example.naeilbank.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -63,6 +66,15 @@ class DevProfileSecurityHealthTest {
 
     @MockBean
     private MediaBlobRepository mediaBlobRepository;
+
+    @MockBean
+    private SourceRepository sourceRepository;
+
+    @MockBean
+    private ConversionRuleRepository conversionRuleRepository;
+
+    @MockBean
+    private LedgerEntryRepository ledgerEntryRepository;
 
     @Test
     void devProfileHealthEndpointIsPublicWithFixtureConfiguration() throws Exception {

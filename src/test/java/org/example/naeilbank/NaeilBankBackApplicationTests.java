@@ -3,7 +3,10 @@ package org.example.naeilbank;
 import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
 import org.example.naeilbank.domain.model.repository.AuditEventRepository;
 import org.example.naeilbank.domain.model.repository.ConsentRepository;
+import org.example.naeilbank.domain.model.repository.ConversionRuleRepository;
+import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
 import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
+import org.example.naeilbank.domain.model.repository.SourceRepository;
 import org.example.naeilbank.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
@@ -40,6 +43,15 @@ class NaeilBankBackApplicationTests {
 
     @MockBean
     private MediaBlobRepository mediaBlobRepository;
+
+    @MockBean
+    private SourceRepository sourceRepository;
+
+    @MockBean
+    private ConversionRuleRepository conversionRuleRepository;
+
+    @MockBean
+    private LedgerEntryRepository ledgerEntryRepository;
 
     @Test
     void contextLoads() {

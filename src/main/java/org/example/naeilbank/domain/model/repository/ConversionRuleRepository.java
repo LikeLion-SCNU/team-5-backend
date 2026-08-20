@@ -2,10 +2,29 @@ package org.example.naeilbank.domain.model.repository;
 
 import org.example.naeilbank.entity.ConversionRule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ConversionRuleRepository extends JpaRepository<ConversionRule, UUID> {
-    List<ConversionRule> findByHabitTypeAndActiveTrue(ConversionRule.HabitType habitType);
+    List<ConversionRule> findByHabitTypeAndActiveTrueOrderByLabelAsc(ConversionRule.HabitType habitType);
+
+    List<ConversionRule> findByActiveTrueOrderByHabitTypeAscLabelAsc();
+
+    boolean existsBySourceIdAndActiveTrue(UUID sourceId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from ConversionRule r where r.id = :id")
+    Optional<ConversionRule> findByIdForUpdate(@Param("id") UUID id);
+
+    Optional<ConversionRule> findFirstByLogicalKeyOrderByVersionNumberDesc(UUID logicalKey);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from ConversionRule r where r.logicalKey = :logicalKey and r.active = true")
+    List<ConversionRule> findActiveByLogicalKeyForUpdate(@Param("logicalKey") UUID logicalKey);
 }
