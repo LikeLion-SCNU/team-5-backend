@@ -82,15 +82,36 @@ public class AuthService {
             throw new AuthException(ErrorCode.KAKAO_AUTH_FAILED);
         }
 
-        User user = userRepository.findByEmail(kakaoUserInfo.getEmail())
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .email(kakaoUserInfo.getEmail())
-                        .nickname(kakaoUserInfo.getNickname())
-                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                        .authProvider("kakao")
-                        .build()));
+        String kakaoId = kakaoId(kakaoUserInfo);
+        lockKakaoId(kakaoId);
+        User user = userRepository.findByKakaoId(kakaoId)
+                .orElseGet(() -> createKakaoUser(kakaoUserInfo, kakaoId));
 
         return refreshTokenService.issueTokenPair(user);
+    }
+
+    private User createKakaoUser(KakaoUserInfo kakaoUserInfo, String kakaoId) {
+        if (userRepository.existsByEmailIgnoreCase(kakaoUserInfo.getEmail())) {
+            throw new AuthException(ErrorCode.KAKAO_AUTH_FAILED);
+        }
+        return userRepository.save(User.builder()
+                .email(kakaoUserInfo.getEmail())
+                .nickname(kakaoUserInfo.getNickname())
+                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .authProvider("kakao")
+                .kakaoId(kakaoId)
+                .build());
+    }
+
+    private String kakaoId(KakaoUserInfo kakaoUserInfo) {
+        if (kakaoUserInfo.getId() == null || kakaoUserInfo.getId() <= 0) {
+            throw new AuthException(ErrorCode.KAKAO_AUTH_FAILED);
+        }
+        return String.valueOf(kakaoUserInfo.getId());
+    }
+
+    private void lockKakaoId(String kakaoId) {
+        userRepository.lockKakaoId(kakaoId);
     }
 
     private UserSummary userSummary(User user) {

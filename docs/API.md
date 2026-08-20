@@ -21,9 +21,15 @@
 | POST 🔓 | `/api/v1/auth/refresh` | `{refresh_token}` → 새 토큰 쌍 (기존 리프레시 회전 폐기) |
 | POST | `/api/v1/auth/logout` | `{refresh_token}` → 204, 토큰 폐기 |
 
+카카오 OAuth 계약:
+- 실제 백엔드 API 엔드포인트는 `POST /api/v1/auth/kakao`이며, 브라우저 리다이렉트 콜백 URL이 아니다.
+- Kakao Developers 콘솔 Redirect URI는 프론트엔드가 인가 `code`를 받는 URL이고, 백엔드 `KAKAO_REDIRECT_URI`와 정확히 일치해야 한다.
+- 현재 개발 기본값은 `http://localhost:5173/oauth/kakao/callback`이다. 콘솔에 `/auth/kakao/callback`을 등록하면 현재 개발 설정과 불일치한다.
+- 운영 Redirect URI는 배포 환경변수 `KAKAO_REDIRECT_URI` 값으로 결정한다. 배포 URL을 문서에서 추정하지 않는다.
+
 토큰 응답 공통:
 ```json
-{ "access_token": "jwt...", "refresh_token": "jwt...", "expires_in": 1800 }
+{ "accessToken": "jwt...", "refreshToken": "opaque...", "tokenType": "Bearer", "expiresIn": 1800 }
 ```
 규칙: 액세스 30분 / 리프레시 14일(해시 저장·회전). 비밀번호 8자+문자·숫자, bcrypt 해시.
 

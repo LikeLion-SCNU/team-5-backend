@@ -11,6 +11,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
 public class KakaoOAuthService {
@@ -71,7 +73,12 @@ public class KakaoOAuthService {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(response.getBody());
 
-            Long id = jsonNode.get("id").asLong();
+            JsonNode idNode = jsonNode.get("id");
+            if (idNode == null || idNode.isNull() || !idNode.isIntegralNumber() || !idNode.canConvertToLong()
+                    || idNode.asLong() <= 0) {
+                throw new IllegalArgumentException("Kakao id is required");
+            }
+            Long id = idNode.asLong();
 
             String nickname = "카카오유저";
             JsonNode properties = jsonNode.get("properties");
@@ -79,13 +86,7 @@ public class KakaoOAuthService {
                 nickname = properties.get("nickname").asText();
             }
 
-            String email;
-            JsonNode kakaoAccount = jsonNode.get("kakao_account");
-            if (kakaoAccount != null && kakaoAccount.has("email")) {
-                email = kakaoAccount.get("email").asText();
-            } else {
-                email = "kakao_" + id + "@test.com";
-            }
+            String email = resolveEmail(jsonNode.get("kakao_account"), id);
 
             return new KakaoUserInfo(id, email, nickname);
 
@@ -94,5 +95,23 @@ public class KakaoOAuthService {
         } catch (Exception e) {
             throw new RuntimeException("카카오 사용자 정보 조회 중 알 수 없는 에러", e);
         }
+    }
+
+    private String resolveEmail(JsonNode kakaoAccount, Long id) {
+        if (kakaoAccount != null) {
+            JsonNode emailNode = kakaoAccount.get("email");
+            String email = emailNode == null || emailNode.isNull() ? "" : emailNode.asText().trim();
+            if (!email.isBlank()
+                    && explicitTrue(kakaoAccount, "is_email_valid")
+                    && explicitTrue(kakaoAccount, "is_email_verified")) {
+                return email.toLowerCase(Locale.ROOT);
+            }
+        }
+        return "kakao_" + id + "@users.invalid";
+    }
+
+    private boolean explicitTrue(JsonNode node, String fieldName) {
+        JsonNode value = node.get(fieldName);
+        return value != null && value.isBoolean() && value.asBoolean();
     }
 }

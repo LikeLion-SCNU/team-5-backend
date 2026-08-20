@@ -12,7 +12,12 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
+    Optional<User> findByKakaoId(String kakaoId);
     boolean existsByEmail(String email);
+    boolean existsByEmailIgnoreCase(String email);
+
+    @Query(value = "select pg_advisory_xact_lock(hashtextextended(cast(:kakaoId as text), 0))", nativeQuery = true)
+    void lockKakaoId(@Param("kakaoId") String kakaoId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :userId")
