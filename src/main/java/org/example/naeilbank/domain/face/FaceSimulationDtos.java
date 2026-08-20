@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.UUID;
 
 public final class FaceSimulationDtos {
+    private static final String ILLUSTRATIVE_DISCLAIMER =
+            "이 결과는 설명 목적의 예시 이미지이며 실제 미래 모습이나 의학적 결과를 예측하지 않습니다.";
+
     private FaceSimulationDtos() {
     }
 
@@ -33,6 +36,7 @@ public final class FaceSimulationDtos {
             boolean replayed,
             Instant createdAt,
             Instant updatedAt,
+            String disclaimer,
             List<OutputResponse> outputs
     ) {
         static SimulationResponse from(
@@ -48,9 +52,18 @@ public final class FaceSimulationDtos {
                     replayed,
                     simulation.getCreatedAt(),
                     simulation.getUpdatedAt(),
+                    ILLUSTRATIVE_DISCLAIMER,
                     outputs.stream().map(OutputResponse::from).toList()
             );
         }
+    }
+
+    public record SimulationPage(
+            List<SimulationResponse> items,
+            int page,
+            int size,
+            boolean hasNext
+    ) {
     }
 
     public record OutputResponse(

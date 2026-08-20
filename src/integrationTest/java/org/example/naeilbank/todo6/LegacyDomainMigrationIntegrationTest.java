@@ -119,8 +119,9 @@ class LegacyDomainMigrationIntegrationTest {
 
     private void assertFaceRejected(JdbcTemplate jdbc, UUID userId, String photoUrl) {
         assertThatThrownBy(() -> jdbc.update("""
-                insert into face_simulations (user_id, original_photo_url, status)
-                values (?, ?, 'generating')
+                insert into face_simulations
+                    (user_id, original_photo_url, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'url-only-face', 'test-hash')
                 """, userId, photoUrl))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }

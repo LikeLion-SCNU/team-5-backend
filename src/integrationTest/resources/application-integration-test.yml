@@ -50,7 +50,7 @@ kakao:
 openai:
   api-key: integration-openai-api-key-fixture
   meal-model: gpt-5-mini
-  face-model: gpt-5-mini
+  image-model: gpt-image-2
   timeout: 30s
 
 web-push:

@@ -61,6 +61,15 @@ public class FaceSimulation {
     @Column(name = "processing_started_at")
     private Instant processingStartedAt;
 
+    @Column(name = "next_attempt_at", nullable = false)
+    private Instant nextAttemptAt = Instant.now();
+
+    @Column(name = "claim_token")
+    private UUID claimToken;
+
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
     @Column(name = "completed_at")
     private Instant completedAt;
 
@@ -97,27 +106,52 @@ public class FaceSimulation {
         return status == Status.queued || status == Status.generating || status == Status.processing;
     }
 
-    public void markProcessing(Instant now) {
+    public void markProcessing(UUID claimToken, Instant now) {
         this.status = Status.processing;
         this.processingStartedAt = Objects.requireNonNull(now, "now");
+        this.claimToken = Objects.requireNonNull(claimToken, "claimToken");
+        this.attemptCount += 1;
         this.failureReason = null;
+    }
+
+    public boolean matchesClaim(UUID expectedClaimToken) {
+        return status == Status.processing && Objects.equals(claimToken, expectedClaimToken);
+    }
+
+    public boolean isDue(Instant now, Instant staleBefore) {
+        return ((status == Status.queued || status == Status.generating)
+                && !nextAttemptAt.isAfter(now))
+                || (status == Status.processing
+                && processingStartedAt != null
+                && !processingStartedAt.isAfter(staleBefore));
+    }
+
+    public void scheduleRetry(String reason, Instant retryAt) {
+        this.status = Status.queued;
+        this.nextAttemptAt = Objects.requireNonNull(retryAt, "retryAt");
+        this.processingStartedAt = null;
+        this.claimToken = null;
+        this.failureReason = requireText(reason, "reason");
     }
 
     public void markDone(Instant now) {
         this.status = Status.done;
         this.completedAt = Objects.requireNonNull(now, "now");
+        this.claimToken = null;
         this.failureReason = null;
     }
 
     public void markFailed(String reason, Instant now) {
         this.status = Status.failed;
         this.completedAt = Objects.requireNonNull(now, "now");
+        this.claimToken = null;
         this.failureReason = requireText(reason, "reason");
     }
 
     public void markCancelled(Instant now) {
         this.status = Status.cancelled;
         this.cancelledAt = Objects.requireNonNull(now, "now");
+        this.claimToken = null;
     }
 
     private String requireText(String value, String name) {

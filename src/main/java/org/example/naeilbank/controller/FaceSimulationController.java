@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.naeilbank.domain.face.FaceSimulationDtos.CreateRequest;
 import org.example.naeilbank.domain.face.FaceSimulationDtos.SimulationResponse;
+import org.example.naeilbank.domain.face.FaceSimulationDtos.SimulationPage;
 import org.example.naeilbank.domain.face.FaceSimulationService;
 import org.example.naeilbank.global.exception.AuthException;
 import org.example.naeilbank.global.exception.ErrorCode;
@@ -17,9 +18,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -40,8 +41,12 @@ public class FaceSimulationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SimulationResponse>> list(Authentication authentication) {
-        return ResponseEntity.ok(faceSimulationService.list(authenticatedUserId(authentication)));
+    public ResponseEntity<SimulationPage> list(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(faceSimulationService.list(authenticatedUserId(authentication), page, size));
     }
 
     @GetMapping("/{id}")

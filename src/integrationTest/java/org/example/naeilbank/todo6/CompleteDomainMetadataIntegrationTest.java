@@ -76,7 +76,7 @@ class CompleteDomainMetadataIntegrationTest {
                 "id", "user_id", "original_photo_url", "result_current_url", "result_improved_url",
                 "trend_desc", "status", "created_at", "source_media_id", "version", "updated_at",
                 "idempotency_key", "request_hash", "failure_reason", "processing_started_at",
-                "completed_at", "cancelled_at"));
+                "next_attempt_at", "claim_token", "attempt_count", "completed_at", "cancelled_at"));
         assertExactColumns(jdbc, "protection_events", Set.of(
                 "id", "user_id", "event_type", "detail_json", "created_at", "idempotency_key", "version",
                 "updated_at"));

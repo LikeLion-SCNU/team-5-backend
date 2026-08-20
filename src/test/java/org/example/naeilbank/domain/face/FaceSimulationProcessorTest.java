@@ -1,12 +1,13 @@
 package org.example.naeilbank.domain.face;
 
-import org.example.naeilbank.domain.consent.ConsentGuard;
 import org.example.naeilbank.domain.media.GeneratedMediaStore;
 import org.example.naeilbank.domain.media.MediaModels;
 import org.example.naeilbank.domain.media.MediaService;
+import org.example.naeilbank.domain.model.entity.Consent;
 import org.example.naeilbank.domain.model.entity.FaceSimulation;
 import org.example.naeilbank.domain.model.entity.FaceSimulationOutput;
 import org.example.naeilbank.domain.model.entity.MediaBlob;
+import org.example.naeilbank.domain.model.repository.ConsentRepository;
 import org.example.naeilbank.domain.model.repository.FaceSimulationOutputRepository;
 import org.example.naeilbank.domain.model.repository.FaceSimulationRepository;
 import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
@@ -18,8 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -27,15 +30,18 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class FaceSimulationServiceTest {
+class FaceSimulationProcessorTest {
     private static final Clock CLOCK = Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneOffset.UTC);
     private static final byte[] BYTES = {1, 2, 3};
 
@@ -48,30 +54,58 @@ class FaceSimulationServiceTest {
     @Mock
     MediaService mediaService;
     @Mock
-    ConsentGuard consentGuard;
+    ConsentRepository consentRepository;
     @Mock
     UserRepository userRepository;
     @Mock
     FaceSimulationImageGenerator imageGenerator;
     @Mock
-    ObjectProvider<org.springframework.transaction.support.TransactionTemplate> transactionTemplate;
+    TransactionTemplate transactionTemplate;
 
-    FaceSimulationService service;
+    FaceSimulationProcessor processor;
+    FaceSimulationGenerationService generationService;
 
     @BeforeEach
     void setUp() {
-        service = new FaceSimulationService(
+        generationService = new FaceSimulationGenerationService(
                 simulationRepository,
                 outputRepository,
                 mediaBlobRepository,
                 mediaService,
-                consentGuard,
+                consentRepository,
                 userRepository,
                 imageGenerator,
+                new FaceSimulationInterlock(),
                 CLOCK,
                 transactionTemplate
         );
-        when(transactionTemplate.getIfAvailable()).thenReturn(null);
+        processor = new FaceSimulationProcessor(
+                simulationRepository,
+                userRepository,
+                generationService,
+                CLOCK,
+                transactionTemplate
+        );
+        when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
+        });
+        lenient().doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            Consumer<TransactionStatus> callback = invocation.getArgument(0);
+            callback.accept(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
+    }
+
+    @Test
+    void claimsQueuedOrStaleProcessingWorkUsingFixedRecoveryCutoff() {
+        Instant staleBefore = Instant.parse("2026-08-19T23:45:00Z");
+        when(simulationRepository.findNextDueId(CLOCK.instant(), staleBefore)).thenReturn(Optional.empty());
+
+        assertThat(processor.processOneDue()).isFalse();
+
+        verify(simulationRepository).findNextDueId(CLOCK.instant(), staleBefore);
     }
 
     @Test
@@ -80,21 +114,10 @@ class FaceSimulationServiceTest {
         UUID simulationId = UUID.randomUUID();
         UUID sourceMediaId = UUID.randomUUID();
         FaceSimulation simulation = simulation(userId, simulationId, sourceMediaId);
-        when(simulationRepository.findFirstByStatusInOrderByCreatedAtAsc(any()))
-                .thenReturn(Optional.of(simulation));
+        allowClaim(simulation);
         allowProcessable(userId, sourceMediaId);
         when(mediaService.download(userId, sourceMediaId)).thenReturn(download(sourceMediaId));
-        when(imageGenerator.generate(any(), any())).thenReturn(new FaceSimulationImageGenerator.FaceGenerationResult(
-                "model-v1",
-                "prompt-v1",
-                List.of(
-                        new FaceSimulationImageGenerator.GeneratedImage(
-                                FaceSimulationOutput.Label.current, "image/png", BYTES),
-                        new FaceSimulationImageGenerator.GeneratedImage(
-                                FaceSimulationOutput.Label.improved, "image/png", BYTES)
-                )
-        ));
-        when(simulationRepository.findForUpdate(simulationId)).thenReturn(Optional.of(simulation));
+        when(imageGenerator.generate(any(), any(), any())).thenAnswer(invocation -> generated(invocation.getArgument(2)));
         UUID currentMediaId = UUID.randomUUID();
         UUID improvedMediaId = UUID.randomUUID();
         when(mediaService.storeGeneratedUnique(userId, GeneratedMediaStore.GeneratedPurpose.CURRENT, "image/png", BYTES))
@@ -102,7 +125,7 @@ class FaceSimulationServiceTest {
         when(mediaService.storeGeneratedUnique(userId, GeneratedMediaStore.GeneratedPurpose.IMPROVED, "image/png", BYTES))
                 .thenReturn(stored(improvedMediaId, MediaBlob.Purpose.face_output_improved));
 
-        boolean processed = service.processOneDue();
+        boolean processed = processor.processOneDue();
 
         assertThat(processed).isTrue();
         assertThat(simulation.getStatus()).isEqualTo(FaceSimulation.Status.done);
@@ -122,23 +145,43 @@ class FaceSimulationServiceTest {
         UUID simulationId = UUID.randomUUID();
         UUID sourceMediaId = UUID.randomUUID();
         FaceSimulation simulation = simulation(userId, simulationId, sourceMediaId);
-        when(simulationRepository.findFirstByStatusInOrderByCreatedAtAsc(any()))
-                .thenReturn(Optional.of(simulation));
+        allowClaim(simulation);
         allowProcessable(userId, sourceMediaId);
         when(mediaService.download(userId, sourceMediaId)).thenReturn(download(sourceMediaId));
-        when(imageGenerator.generate(any(), any())).thenReturn(new FaceSimulationImageGenerator.FaceGenerationResult(
-                "model-v1",
-                "prompt-v1",
-                List.of(new FaceSimulationImageGenerator.GeneratedImage(
-                        FaceSimulationOutput.Label.current, "image/png", BYTES))
-        ));
-        when(simulationRepository.findForUpdate(simulationId)).thenReturn(Optional.of(simulation));
+        when(imageGenerator.generate(any(), any(), any())).thenAnswer(invocation -> {
+            FaceSimulationOutput.Label label = invocation.getArgument(2);
+            if (label == FaceSimulationOutput.Label.current) {
+                return generated(label);
+            }
+            return new FaceSimulationImageGenerator.FaceGenerationResult("model-v1", "prompt-v1", List.of());
+        });
 
-        boolean processed = service.processOneDue();
+        boolean processed = processor.processOneDue();
 
         assertThat(processed).isTrue();
         assertThat(simulation.getStatus()).isEqualTo(FaceSimulation.Status.failed);
         assertThat(simulation.getFailureReason()).isEqualTo("malformed_response");
+        verify(mediaService, never()).storeGeneratedUnique(any(), any(), any(), any());
+        verify(outputRepository, never()).save(any());
+    }
+
+    @Test
+    void cancellationDuringVendorCallDiscardsBothGeneratedOutputs() {
+        UUID userId = UUID.randomUUID();
+        UUID simulationId = UUID.randomUUID();
+        UUID sourceMediaId = UUID.randomUUID();
+        FaceSimulation simulation = simulation(userId, simulationId, sourceMediaId);
+        allowClaim(simulation);
+        allowProcessable(userId, sourceMediaId);
+        when(mediaService.download(userId, sourceMediaId)).thenReturn(download(sourceMediaId));
+        when(imageGenerator.generate(any(), any(), any())).thenAnswer(invocation -> {
+            simulation.markCancelled(CLOCK.instant());
+            return generated(invocation.getArgument(2));
+        });
+
+        assertThat(processor.processOneDue()).isTrue();
+
+        assertThat(simulation.getStatus()).isEqualTo(FaceSimulation.Status.cancelled);
         verify(mediaService, never()).storeGeneratedUnique(any(), any(), any(), any());
         verify(outputRepository, never()).save(any());
     }
@@ -152,6 +195,7 @@ class FaceSimulationServiceTest {
                 "hash-" + simulationId
         );
         ReflectionTestUtils.setField(simulation, "id", simulationId);
+        ReflectionTestUtils.setField(simulation, "nextAttemptAt", CLOCK.instant());
         return simulation;
     }
 
@@ -171,6 +215,25 @@ class FaceSimulationServiceTest {
                 "a".repeat(64),
                 BYTES
         )));
+        when(consentRepository.findForUpdate(userId, Consent.Purpose.FACE_AI)).thenReturn(Optional.of(
+                Consent.create(userId, Consent.Purpose.FACE_AI, true, 1, "f".repeat(64), CLOCK.instant())
+        ));
+    }
+
+    private void allowClaim(FaceSimulation simulation) {
+        UUID simulationId = simulation.getId();
+        UUID userId = simulation.getUserId();
+        when(simulationRepository.findNextDueId(any(), any())).thenReturn(Optional.of(simulationId));
+        when(simulationRepository.findById(simulationId)).thenReturn(Optional.of(simulation));
+        when(simulationRepository.findOwnedForUpdate(simulationId, userId)).thenReturn(Optional.of(simulation));
+    }
+
+    private FaceSimulationImageGenerator.FaceGenerationResult generated(FaceSimulationOutput.Label label) {
+        return new FaceSimulationImageGenerator.FaceGenerationResult(
+                "model-v1",
+                "prompt-v1",
+                List.of(new FaceSimulationImageGenerator.GeneratedImage(label, "image/png", BYTES))
+        );
     }
 
     private MediaModels.MediaDownload download(UUID mediaId) {

@@ -24,6 +24,7 @@ import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfig
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ActiveProfiles("test")
 @SpringBootTest(properties = {
@@ -80,6 +81,9 @@ class NaeilBankBackApplicationTests {
 
     @MockBean
     private MealService mealService;
+
+    @MockBean
+    private TransactionTemplate transactionTemplate;
 
     @Test
     void contextLoads() {

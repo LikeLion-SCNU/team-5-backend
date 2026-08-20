@@ -13,7 +13,7 @@ import java.time.Duration;
 public record OpenAiProperties(
         @NotBlank String apiKey,
         @NotBlank String mealModel,
-        @NotBlank String faceModel,
+        @NotBlank String imageModel,
         @NotNull Duration timeout,
         @NotNull URI responsesUri
 ) {

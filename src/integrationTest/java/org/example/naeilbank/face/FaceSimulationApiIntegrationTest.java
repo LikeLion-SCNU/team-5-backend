@@ -3,7 +3,7 @@ package org.example.naeilbank.face;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.naeilbank.domain.face.FaceSimulationImageGenerator;
-import org.example.naeilbank.domain.face.FaceSimulationService;
+import org.example.naeilbank.domain.face.FaceSimulationProcessor;
 import org.example.naeilbank.domain.model.entity.FaceSimulationOutput;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.Test;
@@ -24,14 +24,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.example.naeilbank.face.FaceIntegrationFixtures.png;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
@@ -72,7 +70,7 @@ class FaceSimulationApiIntegrationTest {
     @Autowired
     JwtTokenProvider jwtTokenProvider;
     @Autowired
-    FaceSimulationService faceSimulationService;
+    FaceSimulationProcessor faceSimulationProcessor;
     @MockBean
     FaceSimulationImageGenerator imageGenerator;
 
@@ -85,16 +83,15 @@ class FaceSimulationApiIntegrationTest {
         byte[] input = png(16, 16);
         byte[] current = png(8, 8);
         byte[] improved = png(10, 10);
-        when(imageGenerator.generate(any(), any())).thenReturn(new FaceSimulationImageGenerator.FaceGenerationResult(
-                "face-model-test",
-                "prompt-test",
-                List.of(
-                        new FaceSimulationImageGenerator.GeneratedImage(
-                                FaceSimulationOutput.Label.current, "image/png", current),
-                        new FaceSimulationImageGenerator.GeneratedImage(
-                                FaceSimulationOutput.Label.improved, "image/png", improved)
-                )
-        ));
+        when(imageGenerator.generate(any(), any(), any())).thenAnswer(invocation -> {
+            FaceSimulationOutput.Label label = invocation.getArgument(2);
+            byte[] content = label == FaceSimulationOutput.Label.current ? current : improved;
+            return new FaceSimulationImageGenerator.FaceGenerationResult(
+                    "face-model-test",
+                    "prompt-test",
+                    List.of(new FaceSimulationImageGenerator.GeneratedImage(label, "image/png", content))
+            );
+        });
 
         UUID sourceMediaId = uploadFaceInput(ownerId, input);
         String request = """
@@ -125,17 +122,48 @@ class FaceSimulationApiIntegrationTest {
                 .andExpect(jsonPath("$.id").value(simulationId.toString()))
                 .andExpect(jsonPath("$.replayed").value(true));
 
-        assertThat(faceSimulationService.processOneDue()).isTrue();
+        assertThat(faceSimulationProcessor.processOneDue()).isTrue();
         JsonNode done = objectMapper.readTree(mockMvc.perform(get("/api/v1/face-simulations/{id}", simulationId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("done"))
+                .andExpect(jsonPath("$.disclaimer").isNotEmpty())
                 .andExpect(jsonPath("$.outputs.length()").value(2))
                 .andExpect(jsonPath("$.outputs[0].label").value("current"))
                 .andExpect(jsonPath("$.outputs[1].label").value("improved"))
                 .andReturn().getResponse().getContentAsString());
         UUID currentMediaId = UUID.fromString(done.at("/outputs/0/mediaId").asText());
         UUID improvedMediaId = UUID.fromString(done.at("/outputs/1/mediaId").asText());
+        mockMvc.perform(get("/api/v1/face-simulations")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false));
+
+        JsonNode second = objectMapper.readTree(mockMvc.perform(post("/api/v1/face-simulations")
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(request.replace("face-key-1", "face-key-2")))
+                .andExpect(status().isAccepted())
+                .andReturn().getResponse().getContentAsString());
+        UUID secondSimulationId = UUID.fromString(second.at("/id").asText());
+        jdbcTemplate.update("""
+                update face_simulations
+                set status = 'processing',
+                    processing_started_at = now() - interval '30 minutes',
+                    claim_token = gen_random_uuid(),
+                    attempt_count = 1
+                where id = ?
+                """, secondSimulationId);
+        assertThat(faceSimulationProcessor.processOneDue()).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from face_simulations where id = ?", String.class, secondSimulationId))
+                .isEqualTo("done");
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from face_simulation_outputs where simulation_id in (?, ?)",
+                Integer.class, simulationId, secondSimulationId)).isEqualTo(4);
 
         download(ownerId, sourceMediaId).andExpect(status().isOk()).andExpect(content().bytes(input));
         download(ownerId, currentMediaId).andExpect(status().isOk()).andExpect(content().bytes(current));
@@ -143,28 +171,52 @@ class FaceSimulationApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .exists(HttpHeaders.ETAG))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
                         .longValue(HttpHeaders.CONTENT_LENGTH, improved.length));
         mockMvc.perform(get("/api/v1/face-media/{id}", currentMediaId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(otherId)))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(delete("/api/v1/face-media/{id}", improvedMediaId)
+        mockMvc.perform(get("/api/v1/face-simulations/{id}", simulationId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(otherId)))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/v1/face-simulations/{id}/cancel", simulationId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(otherId)))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/face-simulations/{id}", simulationId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(otherId)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/face-media/{id}", improvedMediaId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(otherId)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/v1/face-simulations/{id}", simulationId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/v1/face-simulations/{id}", simulationId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
+                .andExpect(status().isNoContent());
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from media_blobs where id = ?", Integer.class, sourceMediaId)).isOne();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from face_simulations where id = ?", Integer.class, secondSimulationId)).isOne();
 
         mockMvc.perform(delete("/api/v1/face-media/{id}", sourceMediaId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isNoContent());
-        assertThat(jdbcTemplate.queryForObject("""
-                        select count(*) from media_blobs where id in (?, ?, ?)
-                        """,
-                Integer.class,
-                sourceMediaId,
-                currentMediaId,
-                improvedMediaId
-        )).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from media_blobs where user_id = ?", Integer.class, ownerId)).isZero();
         mockMvc.perform(get("/api/v1/face-media/{id}", sourceMediaId)
                         .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/face-media/{id}", sourceMediaId)
+                        .header(HttpHeaders.AUTHORIZATION, accessToken(ownerId)))
+                .andExpect(status().isNoContent());
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from audit_events where user_id = ? and event_type = 'FACE_DATA_DELETED'",
+                Integer.class,
+                ownerId
+        )).isGreaterThanOrEqualTo(2);
     }
 
     private UUID uploadFaceInput(UUID userId, byte[] content) throws Exception {
@@ -211,16 +263,4 @@ class FaceSimulationApiIntegrationTest {
         return "Bearer " + jwtTokenProvider.createToken(userId, "face@example.com", "USER");
     }
 
-    private byte[] png(int width, int height) {
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        image.setRGB(0, 0, 0x336699);
-        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            if (!ImageIO.write(image, "png", output)) {
-                throw new IllegalStateException("PNG writer is unavailable");
-            }
-            return output.toByteArray();
-        } catch (java.io.IOException e) {
-            throw new IllegalStateException("Could not create image fixture", e);
-        }
-    }
 }

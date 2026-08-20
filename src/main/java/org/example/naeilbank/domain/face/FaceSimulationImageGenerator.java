@@ -5,7 +5,11 @@ import org.example.naeilbank.domain.model.entity.FaceSimulationOutput;
 import java.util.List;
 
 public interface FaceSimulationImageGenerator {
-    FaceGenerationResult generate(InputImage sourceImage, String trendDescription);
+    FaceGenerationResult generate(
+            InputImage sourceImage,
+            String trendDescription,
+            FaceSimulationOutput.Label requestedLabel
+    );
 
     record InputImage(String contentType, byte[] content) {
     }

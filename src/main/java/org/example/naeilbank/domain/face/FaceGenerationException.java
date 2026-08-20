@@ -15,6 +15,9 @@ public class FaceGenerationException extends RuntimeException {
     public enum Reason {
         timeout,
         rate_limited,
+        authentication_failed,
+        safety_refusal,
+        invalid_request,
         malformed_response,
         upstream_failure
     }

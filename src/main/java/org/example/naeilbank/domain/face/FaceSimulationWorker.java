@@ -9,12 +9,15 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "app.face-simulation.worker-enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class FaceSimulationWorker {
-    private final FaceSimulationService faceSimulationService;
+    private static final int MAX_BATCH_SIZE = 10;
 
-    @Scheduled(fixedDelayString = "${app.face-simulation.worker-delay:5s}")
+    private final FaceSimulationProcessor processor;
+
+    @Scheduled(fixedDelayString = "${app.face-simulation.worker-delay:5000}")
     void processDue() {
-        while (faceSimulationService.processOneDue()) {
-            // Drain due work in small transactional claims.
+        int processed = 0;
+        while (processed < MAX_BATCH_SIZE && processor.processOneDue()) {
+            processed++;
         }
     }
 }

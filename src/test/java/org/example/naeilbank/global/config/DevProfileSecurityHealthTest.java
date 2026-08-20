@@ -6,6 +6,8 @@ import org.example.naeilbank.domain.ledger.LedgerQueryRepository;
 import org.example.naeilbank.domain.model.repository.AuditEventRepository;
 import org.example.naeilbank.domain.model.repository.ConsentRepository;
 import org.example.naeilbank.domain.model.repository.ConversionRuleRepository;
+import org.example.naeilbank.domain.model.repository.FaceSimulationOutputRepository;
+import org.example.naeilbank.domain.model.repository.FaceSimulationRepository;
 import org.example.naeilbank.domain.model.repository.HealthDailyRepository;
 import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
 import org.example.naeilbank.domain.model.repository.MealItemRepository;
@@ -23,6 +25,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -95,6 +98,15 @@ class DevProfileSecurityHealthTest {
 
     @MockBean
     private MealService mealService;
+
+    @MockBean
+    private FaceSimulationRepository faceSimulationRepository;
+
+    @MockBean
+    private FaceSimulationOutputRepository faceSimulationOutputRepository;
+
+    @MockBean
+    private TransactionTemplate transactionTemplate;
 
     @Test
     void devProfileHealthEndpointIsPublicWithFixtureConfiguration() throws Exception {

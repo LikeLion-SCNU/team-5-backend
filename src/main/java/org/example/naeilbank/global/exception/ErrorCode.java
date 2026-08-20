@@ -31,7 +31,6 @@ public enum ErrorCode {
     MEDIA_TYPE_MISMATCH(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "파일 내용과 선언된 이미지 형식이 다릅니다."),
     MEDIA_IN_USE(HttpStatus.CONFLICT, "사용 중인 미디어는 삭제할 수 없습니다."),
     FACE_SIMULATION_NOT_FOUND(HttpStatus.NOT_FOUND, "얼굴 시뮬레이션을 찾을 수 없습니다."),
-    FACE_SIMULATION_STATE_CONFLICT(HttpStatus.CONFLICT, "얼굴 시뮬레이션 상태가 변경되었습니다."),
     EVIDENCE_NOT_FOUND(HttpStatus.NOT_FOUND, "환산 근거를 찾을 수 없습니다."),
     EVIDENCE_VERSION_CONFLICT(HttpStatus.CONFLICT, "환산 근거가 변경되었습니다. 최신 상태를 다시 확인해주세요."),
     INVALID_EVIDENCE_URL(HttpStatus.BAD_REQUEST, "근거 URL은 유효한 HTTPS 주소여야 합니다."),
