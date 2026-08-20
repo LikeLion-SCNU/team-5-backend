@@ -2,6 +2,7 @@ package org.example.naeilbank.global.config;
 
 import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
 import org.example.naeilbank.domain.conversion.ConversionPostingRepository;
+import org.example.naeilbank.domain.ledger.LedgerQueryRepository;
 import org.example.naeilbank.domain.model.repository.AuditEventRepository;
 import org.example.naeilbank.domain.model.repository.ConsentRepository;
 import org.example.naeilbank.domain.model.repository.ConversionRuleRepository;
@@ -87,6 +88,9 @@ class DevProfileSecurityHealthTest {
 
     @MockBean
     private MealItemRepository mealItemRepository;
+
+    @MockBean
+    private LedgerQueryRepository ledgerQueryRepository;
 
     @Test
     void devProfileHealthEndpointIsPublicWithFixtureConfiguration() throws Exception {

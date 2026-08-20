@@ -5,22 +5,15 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
-import java.time.DateTimeException;
-import java.time.ZoneId;
-
 @Validated
 @ConfigurationProperties(prefix = "app.timezone")
 public record TimezoneProperties(
         @NotBlank String defaultZone
 ) {
+    private static final String REQUIRED_ZONE = "Asia/Seoul";
 
-    @AssertTrue(message = "default-zone must be a valid ZoneId")
-    public boolean isDefaultZoneValid() {
-        try {
-            ZoneId.of(defaultZone);
-            return true;
-        } catch (DateTimeException ignored) {
-            return false;
-        }
+    @AssertTrue(message = "default-zone must be Asia/Seoul")
+    public boolean isDefaultZoneKst() {
+        return REQUIRED_ZONE.equals(defaultZone);
     }
 }

@@ -43,6 +43,8 @@ public enum ErrorCode {
     CONVERSION_CONDITION_UNSUPPORTED(HttpStatus.UNPROCESSABLE_ENTITY, "지원하지 않는 조건식이 포함된 환산 규칙입니다."),
     CONVERSION_SOURCE_EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "환산 원본 이벤트를 찾을 수 없습니다."),
     UNSUPPORTED_CONVERSION_SOURCE(HttpStatus.UNPROCESSABLE_ENTITY, "습관 유형과 원본 이벤트 유형이 호환되지 않습니다."),
+    INVALID_LEDGER_DATE_RANGE(HttpStatus.BAD_REQUEST, "원장 조회 날짜 범위가 올바르지 않습니다."),
+    INVALID_LEDGER_PAGE(HttpStatus.BAD_REQUEST, "원장 페이지 요청이 올바르지 않습니다."),
     VALIDATION_FAILED(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "허용되지 않은 HTTP 메서드입니다."),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
