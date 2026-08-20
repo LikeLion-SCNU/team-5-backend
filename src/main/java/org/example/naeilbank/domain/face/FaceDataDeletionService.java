@@ -44,7 +44,8 @@ public class FaceDataDeletionService {
         simulationRepository.delete(simulation);
         simulationRepository.flush();
         deleteMedia(userId, outputMediaIds);
-        if (!simulationRepository.existsByUserIdAndSourceMediaId(userId, sourceMediaId)) {
+        // 생성 완료 시 이미 파기된 경우 sourceMediaId는 비어 있다.
+        if (sourceMediaId != null && !simulationRepository.existsByUserIdAndSourceMediaId(userId, sourceMediaId)) {
             mediaService.delete(userId, sourceMediaId);
         }
         auditAppendService.appendFaceDeletion(userId, "FACE_SIMULATION", simulationId);
