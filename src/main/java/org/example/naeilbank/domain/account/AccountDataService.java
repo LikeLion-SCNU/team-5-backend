@@ -41,7 +41,7 @@ public class AccountDataService {
                         0L),
                 new DataCategory("face", "시뮬레이션 결과",
                         count("select count(*) from face_simulations where user_id = ?", userId),
-                        mediaBytes(userId, "face_input") + mediaBytes(userId, "face_output")),
+                        mediaBytes(userId, "face_input") + mediaBytes(userId, "face_output_current") + mediaBytes(userId, "face_output_improved")),
                 new DataCategory("notification", "알림 구독·기록",
                         count("select count(*) from web_push_subscriptions where user_id = ?", userId)
                                 + count("select count(*) from notification_attempts where user_id = ?", userId),
@@ -129,7 +129,7 @@ public class AccountDataService {
         long rows = jdbc.update("delete from face_simulation_outputs where user_id = ?", userId);
         rows += jdbc.update("delete from face_simulations where user_id = ?", userId);
         rows += jdbc.update(
-                "delete from media_blobs where user_id = ? and purpose in ('face_input', 'face_output')", userId);
+                "delete from media_blobs where user_id = ? and purpose in ('face_input', 'face_output_current', 'face_output_improved')", userId);
         return rows;
     }
 
