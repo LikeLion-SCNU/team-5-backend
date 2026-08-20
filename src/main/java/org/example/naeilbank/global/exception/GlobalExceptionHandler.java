@@ -10,8 +10,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.UUID;
-
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -45,7 +43,7 @@ public class GlobalExceptionHandler {
         String correlationId = correlationId(request);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .header("X-Correlation-Id", correlationId)
+                .header(CorrelationId.HEADER_NAME, correlationId)
                 .body(new ErrorResponse("INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다.", correlationId));
     }
 
@@ -53,15 +51,11 @@ public class GlobalExceptionHandler {
         String correlationId = correlationId(request);
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
-                .header("X-Correlation-Id", correlationId)
+                .header(CorrelationId.HEADER_NAME, correlationId)
                 .body(new ErrorResponse(errorCode.name(), message, correlationId));
     }
 
     private String correlationId(HttpServletRequest request) {
-        String header = request.getHeader("X-Correlation-Id");
-        if (header != null && header.length() <= 128 && header.matches("[A-Za-z0-9._:-]+")) {
-            return header;
-        }
-        return UUID.randomUUID().toString();
+        return CorrelationId.resolve(request);
     }
 }

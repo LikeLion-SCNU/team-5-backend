@@ -7,6 +7,7 @@ import org.example.naeilbank.global.exception.ErrorCode;
 import org.example.naeilbank.global.exception.SecurityErrorResponseWriter;
 import org.example.naeilbank.global.jwt.JwtAuthenticationFilter;
 import org.example.naeilbank.global.security.AuthRateLimitFilter;
+import org.example.naeilbank.global.security.CorrelationIdFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -69,6 +71,7 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, accessDeniedException) ->
                                 securityErrorResponseWriter.write(request, response, ErrorCode.ACCESS_DENIED))
                 )
+                .addFilterBefore(new CorrelationIdFilter(), CorsFilter.class)
                 .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

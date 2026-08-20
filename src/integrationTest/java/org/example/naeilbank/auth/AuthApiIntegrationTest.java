@@ -12,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +21,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -245,7 +249,8 @@ class AuthApiIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
         mockMvc.perform(get("/api/admin/probe").header("Authorization", "Bearer " + adminAccessToken))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ok"));
 
         mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer malformed"))
                 .andExpect(status().isUnauthorized())
@@ -404,6 +409,22 @@ class AuthApiIntegrationTest {
             return server;
         } catch (IOException e) {
             throw new IllegalStateException("Could not start Kakao mock server", e);
+        }
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class AdminProbeConfiguration {
+        @Bean
+        AdminProbeController adminProbeController() {
+            return new AdminProbeController();
+        }
+    }
+
+    @RestController
+    static class AdminProbeController {
+        @GetMapping("/api/admin/probe")
+        Map<String, String> probe() {
+            return Map.of("status", "ok");
         }
     }
 }
