@@ -9,6 +9,7 @@ import org.example.naeilbank.domain.model.entity.FaceSimulationOutput;
 import org.example.naeilbank.domain.model.entity.MediaBlob;
 import org.example.naeilbank.domain.model.repository.FaceSimulationOutputRepository;
 import org.example.naeilbank.domain.model.repository.FaceSimulationRepository;
+import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
 import org.example.naeilbank.global.exception.AuthException;
 import org.example.naeilbank.global.exception.ErrorCode;
 import org.example.naeilbank.repository.UserRepository;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class FaceDataDeletionService {
     private final FaceSimulationRepository simulationRepository;
     private final FaceSimulationOutputRepository outputRepository;
+    private final MediaBlobRepository mediaBlobRepository;
     private final MediaService mediaService;
     private final UserRepository userRepository;
     private final AuditAppendService auditAppendService;
@@ -92,14 +94,9 @@ public class FaceDataDeletionService {
     }
 
     private MediaMetadata metadataOrNull(UUID userId, UUID mediaId) {
-        try {
-            return mediaService.metadata(userId, mediaId);
-        } catch (AuthException e) {
-            if (e.getErrorCode() == ErrorCode.MEDIA_NOT_FOUND) {
-                return null;
-            }
-            throw e;
-        }
+        return mediaBlobRepository.findMetadata(mediaId, userId, MediaBlob.Status.active)
+                .map(MediaMetadata::from)
+                .orElse(null);
     }
 
     private void requireFacePurpose(MediaMetadata metadata) {
