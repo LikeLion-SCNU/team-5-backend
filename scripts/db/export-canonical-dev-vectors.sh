@@ -110,6 +110,13 @@ if [ "$condition_count" != '0' ]; then
   fail 'UNSUPPORTED_CANONICAL_CONDITION_JSON' 3
 fi
 
+classification_count="$(
+  psql_query "select count(*) from conversion_rules where is_active is true and label !~ '^\\[(MEASURED|DERIVED|ASSUMED)\\]';"
+)"
+if [ "$classification_count" != '0' ]; then
+  fail 'UNSUPPORTED_CANONICAL_EVIDENCE_CLASS' 3
+fi
+
 vector_count="$(
   psql_query "select count(*) from conversion_rules r join sources s on s.id = r.source_id where r.is_active is true;"
 )"
@@ -120,6 +127,10 @@ fi
 psql_query "
 select jsonb_build_object(
   'logical_key_hash', md5(r.logical_key::text),
+  'source_logical_key_hash', md5(s.logical_key::text),
+  'rule_version_number', r.version_number,
+  'source_version_number', s.version_number,
+  'evidence_class', substring(r.label from '^\\[(MEASURED|DERIVED|ASSUMED)\\]'),
   'category', r.habit_type::text,
   'unit', lower(trim(r.unit)),
   'minutes_delta', r.minutes_delta,
