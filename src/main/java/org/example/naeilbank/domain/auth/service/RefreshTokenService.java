@@ -113,7 +113,7 @@ public class RefreshTokenService {
                 refreshToken,
                 "Bearer",
                 jwtTokenProvider.accessTokenTtl().toSeconds(),
-                new UserSummary(user.getId(), user.getEmail(), "ROLE_" + user.getRole().name())
+                new UserSummary(user.getId(), user.getEmail(), user.getName(), "ROLE_" + user.getRole().name())
         );
     }
 

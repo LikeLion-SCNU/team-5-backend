@@ -36,7 +36,8 @@ class AuthApiIntegrationTest extends AuthIntegrationSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "email", email,
-                                "password", "password-123"
+                                "password", "password-123",
+                                "name", "통합테스트"
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("X-Correlation-Id"))

@@ -51,7 +51,7 @@ class AuthKakaoHttpContractTest {
                 "refresh-token",
                 "Bearer",
                 1800,
-                new UserSummary(UUID.randomUUID(), "kakao_1@users.invalid", "ROLE_USER")
+                new UserSummary(UUID.randomUUID(), "kakao_1@users.invalid", "카카오사용자", "ROLE_USER")
         ));
 
         mockMvc.perform(post("/api/v1/auth/kakao")

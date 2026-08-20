@@ -12,11 +12,26 @@ public final class AuthDtos {
 
     public record JoinRequest(
             @Email @NotBlank @Size(max = 254) String email,
-            @NotBlank @Size(min = 8, max = 72) String password
+            @NotBlank @Size(min = 8, max = 72) String password,
+            @NotBlank @Size(max = 50) String name
     ) {
     }
 
-    public record JoinResponse(UUID userId, String message) {
+    public record JoinResponse(UUID userId, String message, boolean verificationRequired) {
+    }
+
+    public record VerifyEmailRequest(
+            @Email @NotBlank @Size(max = 254) String email,
+            @NotBlank @Size(min = 6, max = 6) String code
+    ) {
+    }
+
+    public record ResendVerificationRequest(
+            @Email @NotBlank @Size(max = 254) String email
+    ) {
+    }
+
+    public record VerifyEmailResponse(boolean verified, String message) {
     }
 
     public record LoginRequest(
@@ -43,6 +58,6 @@ public final class AuthDtos {
     public record KakaoLoginRequest(@NotBlank @Size(max = 1024) String code) {
     }
 
-    public record UserSummary(UUID id, String email, String role) {
+    public record UserSummary(UUID id, String email, String name, String role) {
     }
 }

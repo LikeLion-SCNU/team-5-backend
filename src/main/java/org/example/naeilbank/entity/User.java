@@ -27,6 +27,19 @@ public class User {
     @Column(name = "nickname")
     private String nickname;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    @Column(name = "email_verification_code")
+    private String emailVerificationCode;
+
+    @Column(name = "email_verification_expires_at")
+    private Instant emailVerificationExpiresAt;
+
     @Column(name = "auth_provider", nullable = false)
     private String authProvider;
 
@@ -55,9 +68,19 @@ public class User {
     private Instant createdAt = Instant.now();
 
     public static User local(String email, String passwordHash) {
+        return local(email, passwordHash, split(email));
+    }
+
+    private static String split(String email) {
+        int at = email == null ? -1 : email.indexOf('@');
+        return at > 0 ? email.substring(0, at) : email;
+    }
+
+    public static User local(String email, String passwordHash, String name) {
         return User.builder()
                 .email(email)
                 .passwordHash(passwordHash)
+                .name(name)
                 .authProvider("email")
                 .role(Role.USER)
                 .notifyEnabled(false)
@@ -71,6 +94,8 @@ public class User {
         return User.builder()
                 .email(email)
                 .nickname(nickname)
+                .name(nickname)
+                .emailVerified(true)
                 .passwordHash(passwordHash)
                 .authProvider("kakao")
                 .role(Role.USER)
@@ -96,5 +121,17 @@ public class User {
     public void changeNotificationPreference(boolean enabled, LocalTime notifyTime) {
         this.notifyEnabled = enabled;
         this.notifyTime = notifyTime;
+    }
+
+    public void issueEmailVerification(String code, Instant expiresAt) {
+        this.emailVerificationCode = code;
+        this.emailVerificationExpiresAt = expiresAt;
+        this.emailVerified = false;
+    }
+
+    public void markEmailVerified() {
+        this.emailVerified = true;
+        this.emailVerificationCode = null;
+        this.emailVerificationExpiresAt = null;
     }
 }

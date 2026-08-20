@@ -8,6 +8,9 @@ import org.example.naeilbank.domain.auth.dto.AuthDtos.KakaoLoginRequest;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.LoginRequest;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.LogoutRequest;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.RefreshRequest;
+import org.example.naeilbank.domain.auth.dto.AuthDtos.ResendVerificationRequest;
+import org.example.naeilbank.domain.auth.dto.AuthDtos.VerifyEmailRequest;
+import org.example.naeilbank.domain.auth.dto.AuthDtos.VerifyEmailResponse;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.TokenResponse;
 import org.example.naeilbank.domain.auth.dto.AuthDtos.UserSummary;
 import org.example.naeilbank.global.exception.AuthException;
@@ -49,6 +52,16 @@ public class AuthController {
     @PostMapping("/kakao")
     public ResponseEntity<TokenResponse> kakaoLogin(@Valid @RequestBody KakaoLoginRequest request) {
         return ResponseEntity.ok(authService.kakaoLogin(request));
+    }
+
+    @PostMapping("/email/verify")
+    public ResponseEntity<VerifyEmailResponse> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        return ResponseEntity.ok(authService.verifyEmail(request));
+    }
+
+    @PostMapping("/email/resend")
+    public ResponseEntity<VerifyEmailResponse> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        return ResponseEntity.ok(authService.resendVerification(request));
     }
 
     @GetMapping("/me")
