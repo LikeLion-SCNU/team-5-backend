@@ -60,22 +60,32 @@ GET /meals/{id} 응답:
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| GET | `/ledger/balance` | 홈 카드용 `{total_minutes, yesterday_net_minutes}` — **v_balance/v_daily_net 뷰만 조회** |
-| GET | `/ledger/statements/{date}` | 일별 명세서 (아래 예시) |
-| GET | `/ledger/trend?period=7d\|4w` | `[{date, net_minutes}]` 추세 |
+| GET | `/api/v1/ledger/balance` | 홈 카드용 잔고·전일 증감 — **v_balance/v_daily_net 뷰만 조회** |
+| GET | `/api/v1/ledger/statements?from=YYYY-MM-DD&to=YYYY-MM-DD&page=0&size=20` | 날짜 단위 일별 명세서 페이지 |
+| GET | `/api/v1/ledger/trends/daily?to=YYYY-MM-DD` | 종료일 기준 7일 일별 추세 |
+| GET | `/api/v1/ledger/trends/weekly?to=YYYY-MM-DD` | 종료일 포함 주 기준 4주 월요일 시작 추세 |
 | PUT | `/health/daily` | 건강 데이터 upsert `{record_date, sleep_minutes?, steps?, screen_minutes?}` → 환산 배치 트리거 (데모: 시드 주입용) |
 
-GET /ledger/statements/2026-08-22 응답:
+`GET /api/v1/ledger/statements?from=2026-08-22&to=2026-08-22` 응답:
 ```json
 {
-  "date": "2026-08-22", "net_minutes": 134,
-  "entries": [
-    {"habit_type": "sleep", "label": "수면 7시간 30분", "minutes_delta": 90, "rule_id": "uuid", "source_id": "uuid"}
-  ],
-  "protection_mode": false
+  "from": "2026-08-22", "to": "2026-08-22", "page": 0, "size": 20,
+  "hasNext": false, "totalDays": 1,
+  "days": [{
+    "entryDate": "2026-08-22", "dailyNetMinutes": 134,
+    "cumulativeBalanceMinutes": 134, "previousDayDeltaMinutes": 0,
+    "lines": [{
+      "entryId": 1, "entryDate": "2026-08-22", "habitType": "sleep",
+      "minutesDelta": 90, "displayText": "입금 90분",
+      "sourceType": "health_daily", "sourceId": "uuid"
+    }]
+  }]
 }
 ```
-규칙: 환산 계수는 conversion_rules 테이블에서 로드(하드코딩 금지). ledger_entries는 append-only. **보호 모드 사용자에겐 음수 필드를 그대로 주되 `protection_mode: true` 플래그 포함 → 표시는 프론트가 중립 처리.**
+규칙: 환산 계수는 conversion_rules 테이블에서 로드(하드코딩 금지).
+ledger_entries는 append-only다. 보호 모드는 숫자·집계·행을 바꾸지 않고 음수 행의
+`displayText`만 회복 중심 문구로 바꾼다. 날짜와 명세서는 `Asia/Seoul` 고정이며
+사용자별 시간대를 사용하지 않는다.
 
 ## §4. 논문 출처 (F-ILQWSY / 관리자 F-XDDAGG)
 
