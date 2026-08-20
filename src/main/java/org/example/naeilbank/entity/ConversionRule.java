@@ -4,27 +4,49 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "conversion_rules")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ConversionRule extends BaseTimeEntity {
+public class ConversionRule {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Long (BIGINT)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_id", nullable = false)
-    private Source source; // Source 엔티티 참조 (FK)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "habit_type", nullable = false)
+    private HabitType habitType;
 
-    @Column(nullable = false)
-    private String category; // String (VARCHAR)
+    @Column(name = "label", nullable = false)
+    private String label;
 
-    @Column(name = "bmj_coefficient", nullable = false)
-    private BigDecimal bmjCoefficient; // BigDecimal (NUMERIC / DECIMAL)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "condition_json", nullable = false, columnDefinition = "jsonb")
+    private String conditionJson = "{}";
 
-    private String description; // String (VARCHAR)
+    @Column(name = "minutes_delta", nullable = false)
+    private int minutesDelta;
+
+    @Column(name = "unit", nullable = false)
+    private String unit = "per_unit";
+
+    @Column(name = "source_id", nullable = false)
+    private UUID sourceId;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
+    public enum HabitType {
+        sleep,
+        activity,
+        screen_time,
+        food,
+        alcohol
+    }
 }

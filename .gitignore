@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Codex local state ###
+/.omo/
+/.tools/
+/.gradle-local/
+/.debug-journal.md

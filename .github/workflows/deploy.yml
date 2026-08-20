@@ -1,38 +1,130 @@
 name: Deploy to Gabia
+
 on:
   push:
     branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test and package deploy commit
+        run: ./gradlew --no-daemon clean test integrationTest bootJar
+
       - name: Set env by branch
         id: cfg
+        shell: bash
         run: |
+          set -Eeuo pipefail
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "dir=backend-prod" >> $GITHUB_OUTPUT
-            echo "port=8000" >> $GITHUB_OUTPUT
-            echo "db=naeil_bank" >> $GITHUB_OUTPUT
+            echo "dir=backend-prod" >> "$GITHUB_OUTPUT"
+            echo "port=8000" >> "$GITHUB_OUTPUT"
+            echo "db=naeil_bank" >> "$GITHUB_OUTPUT"
+            echo "profile=prod" >> "$GITHUB_OUTPUT"
           else
-            echo "dir=backend-dev" >> $GITHUB_OUTPUT
-            echo "port=8001" >> $GITHUB_OUTPUT
-            echo "db=naeil_bank_dev" >> $GITHUB_OUTPUT
+            echo "dir=backend-dev" >> "$GITHUB_OUTPUT"
+            echo "port=8001" >> "$GITHUB_OUTPUT"
+            echo "db=naeil_bank_dev" >> "$GITHUB_OUTPUT"
+            echo "profile=dev" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Validate Docker deploy package
+        shell: bash
+        env:
+          APP_VERSION: ${{ github.sha }}
+          APP_PORT: ${{ steps.cfg.outputs.port }}
+          DB_NAME: ${{ steps.cfg.outputs.db }}
+          APP_PROFILE: ${{ steps.cfg.outputs.profile }}
+          POSTGRES_PASSWORD: ci-placeholder-password
+          JWT_SECRET: ci-placeholder-jwt-secret
+          KAKAO_CLIENT_ID: ci-placeholder-kakao-client-id
+          KAKAO_CLIENT_SECRET: ci-placeholder-kakao-client-secret
+          KAKAO_REDIRECT_URI: http://localhost:18080/oauth/kakao/callback
+          OPENAI_API_KEY: ci-placeholder-openai-key
+          OPENAI_MEAL_MODEL: gpt-4.1-mini
+          OPENAI_FACE_MODEL: gpt-4.1-mini
+          OPENAI_TIMEOUT: 30s
+          VAPID_PUBLIC_KEY: ci-placeholder-vapid-public
+          VAPID_PRIVATE_KEY: ci-placeholder-vapid-private
+          VAPID_SUBJECT: mailto:ci@example.com
+          CORS_ORIGINS: http://localhost:5173
+          APP_TIMEZONE_DEFAULT_ZONE: Asia/Seoul
+          APP_SCHEDULING_MORNING_STATEMENT_CRON: "0 0 8 * * *"
+          APP_UPLOAD_MAX_INPUT_SIZE: 10MB
+          APP_UPLOAD_MAX_GENERATED_SIZE: 20MB
+          SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
+          SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/deploy/remote-deploy.sh
+          docker compose config
+          docker build --tag "naeil-bank-backend:${APP_VERSION}" .
+
       - name: Setup SSH
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          set -Eeuo pipefail
+          test -n "$SERVER_HOST" || { echo 'MISSING_PREREQUISITE SERVER_HOST' >&2; exit 2; }
+          test -n "$SERVER_SSH_KEY" || { echo 'MISSING_PREREQUISITE SERVER_SSH_KEY' >&2; exit 2; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SERVER_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          timeout 15s ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+
       - name: Sync code to server
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
-          rsync -az --delete --exclude .git \
-            ./ ubuntu@${{ secrets.SERVER_HOST }}:/home/ubuntu/apps/${{ steps.cfg.outputs.dir }}/
+          set -Eeuo pipefail
+          rsync -az \
+            --exclude .git \
+            --exclude .gradle \
+            --exclude build \
+            --exclude .omo \
+            --exclude .codegraph \
+            --exclude .env \
+            --exclude '.env.*' \
+            ./ "ubuntu@$SERVER_HOST:/home/ubuntu/apps/${{ steps.cfg.outputs.dir }}/"
+
       - name: Build & up
+        shell: bash
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
         run: |
-          ssh ubuntu@${{ secrets.SERVER_HOST }} \
+          set -Eeuo pipefail
+          ssh "ubuntu@$SERVER_HOST" \
             "cd /home/ubuntu/apps/${{ steps.cfg.outputs.dir }} && \
-             APP_PORT=${{ steps.cfg.outputs.port }} DB_NAME=${{ steps.cfg.outputs.db }} \
-             docker compose --env-file /home/ubuntu/app/.env -p ${{ steps.cfg.outputs.dir }} up -d --build && \
+             bash scripts/deploy/remote-deploy.sh \
+               '${{ steps.cfg.outputs.dir }}' \
+               '${{ github.sha }}' \
+               '${{ steps.cfg.outputs.port }}' \
+               '${{ steps.cfg.outputs.db }}' \
+               '${{ steps.cfg.outputs.profile }}' \
+               '/home/ubuntu/app/.env' && \
              docker image prune -f"
+
+      - name: Cleanup runner credentials
+        if: always()
+        shell: bash
+        run: rm -f ~/.ssh/id_ed25519

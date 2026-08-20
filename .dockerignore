@@ -1,0 +1,10 @@
+.git
+.gradle
+build
+.omo
+.codegraph
+docs
+*.log
+.env
+.env.*
+!.env.example

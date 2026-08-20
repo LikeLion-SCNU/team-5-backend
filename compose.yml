@@ -1,12 +1,43 @@
 services:
   api:
     build: .
+    image: naeil-bank-backend:${APP_VERSION:?APP_VERSION is required}
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8000}:8000"
+      - "${APP_PORT:?APP_PORT is required}:8080"
     environment:
-      DB_NAME: ${DB_NAME:-naeil_bank}
-      DATABASE_URL: postgresql://naeil:${POSTGRES_PASSWORD}@naeil-db:5432/${DB_NAME:-naeil_bank}
+      SPRING_PROFILES_ACTIVE: ${APP_PROFILE:?APP_PROFILE is required}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://naeil-db:5432/${DB_NAME:?DB_NAME is required}
+      SPRING_DATASOURCE_USERNAME: naeil
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:?KAKAO_CLIENT_ID is required}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:?KAKAO_CLIENT_SECRET is required}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI:?KAKAO_REDIRECT_URI is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      OPENAI_MEAL_MODEL: ${OPENAI_MEAL_MODEL:?OPENAI_MEAL_MODEL is required}
+      OPENAI_FACE_MODEL: ${OPENAI_FACE_MODEL:?OPENAI_FACE_MODEL is required}
+      OPENAI_TIMEOUT: ${OPENAI_TIMEOUT:?OPENAI_TIMEOUT is required}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?VAPID_PUBLIC_KEY is required}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?VAPID_PRIVATE_KEY is required}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:?VAPID_SUBJECT is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      APP_TIMEZONE_DEFAULT_ZONE: ${APP_TIMEZONE_DEFAULT_ZONE:?APP_TIMEZONE_DEFAULT_ZONE is required}
+      TZ: ${APP_TIMEZONE_DEFAULT_ZONE:?APP_TIMEZONE_DEFAULT_ZONE is required}
+      APP_SCHEDULING_MORNING_STATEMENT_CRON: ${APP_SCHEDULING_MORNING_STATEMENT_CRON:?APP_SCHEDULING_MORNING_STATEMENT_CRON is required}
+      APP_UPLOAD_MAX_INPUT_SIZE: ${APP_UPLOAD_MAX_INPUT_SIZE:?APP_UPLOAD_MAX_INPUT_SIZE is required}
+      APP_UPLOAD_MAX_GENERATED_SIZE: ${APP_UPLOAD_MAX_GENERATED_SIZE:?APP_UPLOAD_MAX_GENERATED_SIZE is required}
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:-10MB}
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:-10MB}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
     networks: [default, dbnet]
 networks:
   dbnet:

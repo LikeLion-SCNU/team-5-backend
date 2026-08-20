@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://naeil-db:5432/naeil_bank}
+    username: ${SPRING_DATASOURCE_USERNAME:naeil}
+    password: ${SPRING_DATASOURCE_PASSWORD:${POSTGRES_PASSWORD}}
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  cors:
+    allowed-origins: ${CORS_ORIGINS}
+
+kakao:
+  client-id: ${KAKAO_CLIENT_ID}
+  redirect-uri: ${KAKAO_REDIRECT_URI}
+  client-secret: ${KAKAO_CLIENT_SECRET}
+
+openai:
+  api-key: ${OPENAI_API_KEY}
+  meal-model: ${OPENAI_MEAL_MODEL:gpt-5-mini}
+  face-model: ${OPENAI_FACE_MODEL:gpt-5-mini}
+  timeout: ${OPENAI_TIMEOUT:30s}
+
+web-push:
+  vapid:
+    public-key: ${VAPID_PUBLIC_KEY}
+    private-key: ${VAPID_PRIVATE_KEY}
+    subject: ${VAPID_SUBJECT}
