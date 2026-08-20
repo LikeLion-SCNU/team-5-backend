@@ -104,8 +104,9 @@ class CompleteDomainConstraintIntegrationTest {
                 values (?, ?, ?, 'analyzing') returning id
                 """, UUID.class, userId, Date.valueOf(LocalDate.of(2026, 8, 20)), mealMediaId);
         UUID faceId = jdbc.queryForObject("""
-                insert into face_simulations (user_id, source_media_id, status)
-                values (?, ?, 'generating') returning id
+                insert into face_simulations
+                    (user_id, source_media_id, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'private-media-face', 'test-hash') returning id
                 """, UUID.class, userId, faceMediaId);
 
         assertThat(jdbc.queryForObject(

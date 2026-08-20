@@ -73,6 +73,16 @@ public class AuditAppendService {
         ));
     }
 
+    public void appendFaceDeletion(UUID userId, String subjectType, UUID subjectId) {
+        auditEventRepository.save(new AuditEvent(
+                userId,
+                "FACE_DATA_DELETED",
+                subjectType,
+                subjectId,
+                writeJson(Map.of("action", "DELETED"))
+        ));
+    }
+
     private ConsentReplay toConsentReplay(AuditEvent event) {
         try {
             JsonNode detail = objectMapper.readTree(event.getDetailJson());

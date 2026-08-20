@@ -16,6 +16,14 @@ public interface ConversionRuleRepository extends JpaRepository<ConversionRule, 
 
     List<ConversionRule> findByActiveTrueOrderByHabitTypeAscLabelAsc();
 
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("""
+            select r from ConversionRule r
+            where r.active = true and r.minutesDelta > 0
+            order by r.habitType asc, r.label asc, r.id asc
+            """)
+    List<ConversionRule> findActiveForPlan();
+
     boolean existsBySourceIdAndActiveTrue(UUID sourceId);
 
     @Lock(LockModeType.PESSIMISTIC_READ)

@@ -12,9 +12,9 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Immutable;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -31,7 +31,6 @@ import java.util.UUID;
                 )
         }
 )
-@Immutable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class FaceSimulationOutput {
@@ -60,6 +59,29 @@ public class FaceSimulationOutput {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    public FaceSimulationOutput(
+            UUID simulationId,
+            UUID userId,
+            UUID mediaBlobId,
+            Label label,
+            String modelVersion,
+            String promptVersion
+    ) {
+        this.simulationId = Objects.requireNonNull(simulationId, "simulationId");
+        this.userId = Objects.requireNonNull(userId, "userId");
+        this.mediaBlobId = Objects.requireNonNull(mediaBlobId, "mediaBlobId");
+        this.label = Objects.requireNonNull(label, "label");
+        this.modelVersion = requireText(modelVersion, "modelVersion");
+        this.promptVersion = requireText(promptVersion, "promptVersion");
+    }
+
+    private String requireText(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+        return value;
+    }
 
     public enum Label {
         current,

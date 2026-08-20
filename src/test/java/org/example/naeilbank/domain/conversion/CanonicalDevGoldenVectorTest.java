@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,6 +25,19 @@ class CanonicalDevGoldenVectorTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String VECTOR_PATH_ENV = "CANONICAL_DEV_VECTOR_PATH";
     private static final String REQUIRE_ENV = "REQUIRE_CANONICAL_DEV_VECTORS";
+    private static final String FIXTURE_PATH = "/canonical-v8-vectors.jsonl";
+    private static final Map<String, ExpectedVector> EXPECTED = Map.of(
+            "ACTIVITY:PER_MINUTE", new ExpectedVector(3, "DERIVED",
+                    "63b6cf0ed4b25ae8a1a2b9ea1a8f50b1", "94b5d4b4e37acedb08aa94ece7f3244a"),
+            "SCREEN_TIME:PER_HOUR", new ExpectedVector(-22, "MEASURED",
+                    "1c2787d2721e8258e28abf746d497022", "e5b7fbdbad52e64e8f5a424069118ca3"),
+            "SLEEP:PER_UNIT", new ExpectedVector(-36, "DERIVED",
+                    "21e03a3451e19edc95c77a90024ad1b7", "04b0d744dad8b6323d311518b2018a83"),
+            "ALCOHOL:PER_DRINK", new ExpectedVector(-15, "DERIVED",
+                    "e1d01b651b729a459225d628f279cfb8", "e682dc6de482f71decd7319cfbc006eb"),
+            "FOOD:PER_SERVING", new ExpectedVector(18, "DERIVED",
+                    "88a7be5635504556d76d03b768ddbe50", "c3793b769cee0ad841e3b347eafb1006")
+    );
 
     @Test
     void canonicalDevVectorsMatchExactConversionEngine() throws Exception {
@@ -41,7 +55,18 @@ class CanonicalDevGoldenVectorTest {
             fail("MISSING_PREREQUISITE CANONICAL_DEV_VECTOR_PATH");
         }
 
-        byte[] payloadBytes = Files.readAllBytes(vectorPath);
+        assertVectors(Files.readAllBytes(vectorPath));
+    }
+
+    @Test
+    void checkedInCanonicalV8FixtureMatchesExactConversionEngine() throws Exception {
+        try (var input = getClass().getResourceAsStream(FIXTURE_PATH)) {
+            assertThat(input).as("canonical V8 vector fixture").isNotNull();
+            assertVectors(input.readAllBytes());
+        }
+    }
+
+    private void assertVectors(byte[] payloadBytes) throws Exception {
         String payload = new String(payloadBytes, StandardCharsets.UTF_8);
         String[] lines = payload.lines()
                 .filter(line -> !line.isBlank())
@@ -70,7 +95,23 @@ class CanonicalDevGoldenVectorTest {
             if (!selectors.add(selector)) {
                 fail("DUPLICATE_CANONICAL_SELECTOR");
             }
+            ExpectedVector expected = EXPECTED.get(selector);
+            if (expected == null) {
+                fail("UNEXPECTED_CANONICAL_SELECTOR");
+            }
             int minutesDelta = requiredInt(vector, "minutes_delta", "UNSUPPORTED_CANONICAL_MINUTES_DELTA");
+            assertThat(minutesDelta).as(selector + " minutes_delta").isEqualTo(expected.minutesDelta());
+            assertThat(requiredText(vector, "evidence_class", "UNSUPPORTED_CANONICAL_EVIDENCE_CLASS"))
+                    .as(selector + " evidence_class").isEqualTo(expected.evidenceClass());
+            assertThat(logicalKeyHash).as(selector + " logical_key_hash")
+                    .isEqualTo(expected.ruleLogicalKeyHash());
+            assertThat(requiredText(vector, "source_logical_key_hash", "AMBIGUOUS_CANONICAL_SOURCE_SET"))
+                    .as(selector + " source_logical_key_hash")
+                    .isEqualTo(expected.sourceLogicalKeyHash());
+            assertThat(requiredInt(vector, "rule_version_number", "UNSUPPORTED_CANONICAL_RULE_VERSION"))
+                    .as(selector + " rule_version_number").isEqualTo(1);
+            assertThat(requiredInt(vector, "source_version_number", "UNSUPPORTED_CANONICAL_SOURCE_VERSION"))
+                    .as(selector + " source_version_number").isEqualTo(1);
             boolean sourceActive = requiredBoolean(vector, "source_active", "UNSUPPORTED_CANONICAL_SOURCE_STATE");
             if (!sourceActive) {
                 fail("INACTIVE_SOURCE_FOR_ACTIVE_RULE");
@@ -94,6 +135,7 @@ class CanonicalDevGoldenVectorTest {
         if (!categories.equals(EnumSet.allOf(HabitCategory.class))) {
             fail("MISSING_CANONICAL_CATEGORY_COVERAGE");
         }
+        assertThat(selectors).containsExactlyInAnyOrderElementsOf(EXPECTED.keySet());
 
         System.out.println("CANONICAL_VECTOR_COUNT=" + lines.length);
         System.out.println("CANONICAL_VECTOR_SHA256=" + sha256(payloadBytes));
@@ -102,6 +144,10 @@ class CanonicalDevGoldenVectorTest {
     private static void assertAllowedShape(JsonNode vector) {
         Set<String> allowed = Set.of(
                 "logical_key_hash",
+                "source_logical_key_hash",
+                "rule_version_number",
+                "source_version_number",
+                "evidence_class",
                 "category",
                 "unit",
                 "minutes_delta",
@@ -182,5 +228,13 @@ class CanonicalDevGoldenVectorTest {
             hex.append(String.format(Locale.ROOT, "%02x", value));
         }
         return hex.toString();
+    }
+
+    private record ExpectedVector(
+            int minutesDelta,
+            String evidenceClass,
+            String ruleLogicalKeyHash,
+            String sourceLogicalKeyHash
+    ) {
     }
 }

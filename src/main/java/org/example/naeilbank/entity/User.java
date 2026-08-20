@@ -40,7 +40,7 @@ public class User {
 
     @Column(name = "notify_enabled", nullable = false)
     @Builder.Default
-    private boolean notifyEnabled = true;
+    private boolean notifyEnabled = false;
 
     @Column(name = "notify_time", nullable = false)
     @Builder.Default
@@ -60,7 +60,7 @@ public class User {
                 .passwordHash(passwordHash)
                 .authProvider("email")
                 .role(Role.USER)
-                .notifyEnabled(true)
+                .notifyEnabled(false)
                 .notifyTime(LocalTime.of(8, 0))
                 .protectionMode(false)
                 .createdAt(Instant.now())
@@ -74,7 +74,7 @@ public class User {
                 .passwordHash(passwordHash)
                 .authProvider("kakao")
                 .role(Role.USER)
-                .notifyEnabled(true)
+                .notifyEnabled(false)
                 .notifyTime(LocalTime.of(8, 0))
                 .protectionMode(false)
                 .createdAt(Instant.now())
@@ -83,5 +83,18 @@ public class User {
 
     public String getPassword() {
         return passwordHash;
+    }
+
+    public void enableProtectionMode() {
+        this.protectionMode = true;
+    }
+
+    public void disableProtectionMode() {
+        this.protectionMode = false;
+    }
+
+    public void changeNotificationPreference(boolean enabled, LocalTime notifyTime) {
+        this.notifyEnabled = enabled;
+        this.notifyTime = notifyTime;
     }
 }

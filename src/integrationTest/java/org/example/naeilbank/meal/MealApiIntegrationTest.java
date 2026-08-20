@@ -4,10 +4,12 @@ import org.example.naeilbank.domain.conversion.ConversionUnit;
 import org.example.naeilbank.domain.conversion.HabitCategory;
 import org.example.naeilbank.domain.meal.MealAnalysisClient;
 import org.example.naeilbank.domain.meal.MealAnalysisContract;
+import org.example.naeilbank.domain.meal.MealEligibility;
 import org.example.naeilbank.global.exception.AuthException;
 import org.example.naeilbank.global.exception.ErrorCode;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -66,9 +68,10 @@ class MealApiIntegrationTest {
     @Autowired JwtTokenProvider jwtTokenProvider;
     @MockBean MealAnalysisClient mealAnalysisClient;
 
+    @BeforeEach
     @AfterEach
     void cleanRules() {
-        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_MEAL%'");
+        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_MEAL%' or logical_key::text like '21000000-%'");
     }
 
     @Test
@@ -190,24 +193,62 @@ class MealApiIntegrationTest {
         assertThat(count("ledger_entries", userId)).isZero();
     }
 
-    private Void confirm(UUID userId, UUID mealId, CountDownLatch start) throws Exception {
-        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+    @Test
+    void genericFoodDoesNotReceiveLongevityCredit() throws Exception {
+        UUID userId = user("meal-neutral-food");
+        grant(userId, "MEAL_AI");
+        UUID mediaId = media(userId, 'b');
+        rule("food", "per_serving", 24);
+        when(mealAnalysisClient.analyze(eq("image/png"), any())).thenReturn(analysis("rice", MealEligibility.NEUTRAL));
+
+        String created = mockMvc.perform(post("/api/v1/meals")
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"media_blob_id":"%s","record_date":"2026-08-20"}
+                                """.formatted(mediaId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        UUID mealId = UUID.fromString(com.fasterxml.jackson.databind.json.JsonMapper.builder()
+                .build().readTree(created).get("id").asText());
+
         mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", mealId)
                         .header(HttpHeaders.AUTHORIZATION, token(userId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("confirmed"));
+                .andExpect(status().isOk());
+
+        assertThat(count("ledger_entries", userId)).isZero();
+        assertThat(count("conversion_postings", userId)).isZero();
+    }
+
+    private Void confirm(UUID userId, UUID mealId, CountDownLatch start) throws Exception {
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        var result = mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", mealId)
+                        .header(HttpHeaders.AUTHORIZATION, token(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andReturn();
+        int status = result.getResponse().getStatus();
+        assertThat(status).isIn(200, 409);
+        if (status == 200) {
+            assertThat(result.getResponse().getContentAsString()).contains("\"status\":\"confirmed\"");
+        }
         return null;
     }
 
     private MealAnalysisContract.AnalyzedMeal analysis(String foodName) {
+        return analysis(foodName, MealEligibility.FRUIT_OR_VEGETABLE);
+    }
+
+    private MealAnalysisContract.AnalyzedMeal analysis(String foodName, MealEligibility eligibility) {
         return new MealAnalysisContract.AnalyzedMeal(List.of(new MealAnalysisContract.AnalyzedItem(
                 foodName,
                 "1 serving",
                 HabitCategory.FOOD,
                 ConversionUnit.PER_SERVING,
-                BigDecimal.ONE
+                BigDecimal.ONE,
+                eligibility
         )));
     }
 

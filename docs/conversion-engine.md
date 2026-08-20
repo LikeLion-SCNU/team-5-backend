@@ -24,6 +24,22 @@ therefore be imported through the evidence administration workflow. Test rules a
 - Non-empty `condition_json` is currently unsupported and fails closed. This avoids silently applying
   a condition format that is not present in the repository's canonical schema contract.
 
+## Health caller normalization
+
+- Sleep is categorical: an observed `sleep_minutes` below 420 emits one `sleep/per_unit` input;
+  420 or more emits no sleep posting. The `-36` rule is a product-level derivation from categorical
+  short-sleep evidence, not a measured per-minute dose response or an individual medical prediction.
+- Activity stores the observed step count unchanged but caps the conversion input at 2,000 steps
+  per day before passing it to `activity/per_1000_steps`. The canonical
+  `+30` per 1,000 steps is derived by assuming 100 steps per minute (1,000 steps = 10 minutes) and
+  applying the separate `+60` per 20 minutes activity mapping, so the cap limits credit to +60 per
+  day. Both assumptions must remain visible because ordinary total steps are only a proxy and the
+  health record does not measure cadence or moderate-intensity minutes directly.
+- `screen_minutes` is accepted only with `screen_metric: "sedentary_tv_equivalent"`. It means
+  sedentary TV-equivalent viewing, not aggregate phone/computer/general screen use. The caller divides
+  minutes by 60 at scale 12 with `HALF_EVEN` and sends the decimal value to `screen_time/per_hour`;
+  absent metric affirmation fails closed before the health row is saved.
+
 ## Idempotency and lineage
 
 `conversion_postings` has one immutable row per user, source event, and habit category. A single

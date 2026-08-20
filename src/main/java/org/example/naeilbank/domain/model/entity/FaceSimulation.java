@@ -15,6 +15,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -48,6 +49,33 @@ public class FaceSimulation {
     @Column(name = "source_media_id", nullable = false)
     private UUID sourceMediaId;
 
+    @Column(name = "idempotency_key", nullable = false)
+    private String idempotencyKey;
+
+    @Column(name = "request_hash", nullable = false)
+    private String requestHash;
+
+    @Column(name = "failure_reason")
+    private String failureReason;
+
+    @Column(name = "processing_started_at")
+    private Instant processingStartedAt;
+
+    @Column(name = "next_attempt_at", nullable = false)
+    private Instant nextAttemptAt = Instant.now();
+
+    @Column(name = "claim_token")
+    private UUID claimToken;
+
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "completed_at")
+    private Instant completedAt;
+
+    @Column(name = "cancelled_at")
+    private Instant cancelledAt;
+
     @Version
     @Column(name = "version", nullable = false)
     private long version;
@@ -55,9 +83,90 @@ public class FaceSimulation {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
+    public FaceSimulation(
+            UUID userId,
+            UUID sourceMediaId,
+            String trendDescription,
+            String idempotencyKey,
+            String requestHash
+    ) {
+        this.userId = Objects.requireNonNull(userId, "userId");
+        this.sourceMediaId = Objects.requireNonNull(sourceMediaId, "sourceMediaId");
+        this.trendDescription = trendDescription;
+        this.idempotencyKey = requireText(idempotencyKey, "idempotencyKey");
+        this.requestHash = requireText(requestHash, "requestHash");
+        this.status = Status.queued;
+    }
+
+    public boolean sameRequest(String requestHash) {
+        return this.requestHash.equals(requestHash);
+    }
+
+    public boolean canCancel() {
+        return status == Status.queued || status == Status.generating || status == Status.processing;
+    }
+
+    public void markProcessing(UUID claimToken, Instant now) {
+        this.status = Status.processing;
+        this.processingStartedAt = Objects.requireNonNull(now, "now");
+        this.claimToken = Objects.requireNonNull(claimToken, "claimToken");
+        this.attemptCount += 1;
+        this.failureReason = null;
+    }
+
+    public boolean matchesClaim(UUID expectedClaimToken) {
+        return status == Status.processing && Objects.equals(claimToken, expectedClaimToken);
+    }
+
+    public boolean isDue(Instant now, Instant staleBefore) {
+        return ((status == Status.queued || status == Status.generating)
+                && !nextAttemptAt.isAfter(now))
+                || (status == Status.processing
+                && processingStartedAt != null
+                && !processingStartedAt.isAfter(staleBefore));
+    }
+
+    public void scheduleRetry(String reason, Instant retryAt) {
+        this.status = Status.queued;
+        this.nextAttemptAt = Objects.requireNonNull(retryAt, "retryAt");
+        this.processingStartedAt = null;
+        this.claimToken = null;
+        this.failureReason = requireText(reason, "reason");
+    }
+
+    public void markDone(Instant now) {
+        this.status = Status.done;
+        this.completedAt = Objects.requireNonNull(now, "now");
+        this.claimToken = null;
+        this.failureReason = null;
+    }
+
+    public void markFailed(String reason, Instant now) {
+        this.status = Status.failed;
+        this.completedAt = Objects.requireNonNull(now, "now");
+        this.claimToken = null;
+        this.failureReason = requireText(reason, "reason");
+    }
+
+    public void markCancelled(Instant now) {
+        this.status = Status.cancelled;
+        this.cancelledAt = Objects.requireNonNull(now, "now");
+        this.claimToken = null;
+    }
+
+    private String requireText(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+        return value;
+    }
+
     public enum Status {
+        queued,
+        processing,
         generating,
         done,
-        failed
+        failed,
+        cancelled
     }
 }

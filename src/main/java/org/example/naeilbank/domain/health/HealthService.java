@@ -9,6 +9,7 @@ import org.example.naeilbank.domain.conversion.ConversionSourceType;
 import org.example.naeilbank.domain.conversion.ConversionUnit;
 import org.example.naeilbank.domain.conversion.HabitCategory;
 import org.example.naeilbank.domain.health.HealthDtos.HealthDailyResponse;
+import org.example.naeilbank.domain.health.HealthDtos.ScreenMetric;
 import org.example.naeilbank.domain.health.HealthDtos.UpsertHealthDailyRequest;
 import org.example.naeilbank.domain.model.entity.Consent;
 import org.example.naeilbank.domain.model.repository.HealthDailyRepository;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +29,13 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class HealthService {
+    private static final int SHORT_SLEEP_THRESHOLD_MINUTES = 7 * 60;
+    private static final int ACTIVITY_CREDIT_CAP_MINUTES = 20;
+    private static final int SCREEN_DEBIT_CAP_MINUTES = 6 * 60;
+    private static final int DAILY_MINUTES_LIMIT = 24 * 60;
+    private static final BigDecimal MINUTES_PER_HOUR = new BigDecimal("60");
+    private static final int INPUT_SCALE = 12;
+
     private final HealthDailyRepository healthDailyRepository;
     private final UserRepository userRepository;
     private final ConsentGuard consentGuard;
@@ -43,51 +52,79 @@ public class HealthService {
                 .orElseGet(() -> new HealthDaily(userId, request.recordDate()));
         rejectCorrection(healthDaily.getSleepMinutes(), request.sleepMinutes());
         rejectCorrection(healthDaily.getSteps(), request.steps());
+        rejectCorrection(healthDaily.getModerateActivityMinutes(), request.moderateActivityMinutes());
         rejectCorrection(healthDaily.getScreenMinutes(), request.screenMinutes());
-        healthDaily.mergeMissing(request.sleepMinutes(), request.steps(), request.screenMinutes());
+        healthDaily.mergeMissing(request.sleepMinutes(), request.steps(),
+                request.moderateActivityMinutes(), request.screenMinutes());
         healthDaily = healthDailyRepository.saveAndFlush(healthDaily);
 
         List<ConversionReceipt> receipts = new ArrayList<>();
-        if (request.sleepMinutes() != null) {
+        if (request.sleepMinutes() != null
+                && request.sleepMinutes() < SHORT_SLEEP_THRESHOLD_MINUTES) {
             receipts.add(convert(userId, healthDaily, HabitCategory.SLEEP,
-                    ConversionUnit.PER_MINUTE, request.sleepMinutes()));
+                    ConversionUnit.PER_UNIT, BigDecimal.ONE));
         }
-        if (request.steps() != null) {
+        if (request.moderateActivityMinutes() != null && request.moderateActivityMinutes() > 0) {
             receipts.add(convert(userId, healthDaily, HabitCategory.ACTIVITY,
-                    ConversionUnit.PER_1000_STEPS, request.steps()));
+                    ConversionUnit.PER_MINUTE, BigDecimal.valueOf(
+                            Math.min(request.moderateActivityMinutes(), ACTIVITY_CREDIT_CAP_MINUTES))));
         }
-        if (request.screenMinutes() != null) {
+        if (request.screenMinutes() != null && request.screenMinutes() > 0) {
             receipts.add(convert(userId, healthDaily, HabitCategory.SCREEN_TIME,
-                    ConversionUnit.PER_MINUTE, request.screenMinutes()));
+                    ConversionUnit.PER_HOUR, decimalHours(
+                            Math.min(request.screenMinutes(), SCREEN_DEBIT_CAP_MINUTES))));
         }
         return HealthDailyResponse.from(healthDaily, receipts);
     }
 
     private ConversionReceipt convert(UUID userId, HealthDaily healthDaily,
-                                      HabitCategory category, ConversionUnit unit, int value) {
+                                      HabitCategory category, ConversionUnit unit, BigDecimal value) {
         return conversionService.convert(userId, new ConversionCommand(
                 healthDaily.getId(),
                 ConversionSourceType.HEALTH_DAILY,
                 category,
                 unit,
-                BigDecimal.valueOf(value),
+                value,
                 healthDaily.getRecordDate()
         ));
     }
 
     private void validate(UpsertHealthDailyRequest request) {
-        if (request.sleepMinutes() == null && request.steps() == null && request.screenMinutes() == null) {
+        if (request.sleepMinutes() == null && request.steps() == null
+                && request.moderateActivityMinutes() == null && request.screenMinutes() == null) {
             throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
         }
         requireNonNegative(request.sleepMinutes());
         requireNonNegative(request.steps());
-        requireNonNegative(request.screenMinutes());
+        requireDailyMinutes(request.sleepMinutes());
+        requireDailyMinutes(request.moderateActivityMinutes());
+        requireDailyMinutes(request.screenMinutes());
+        requireScreenMetric(request.screenMinutes(), request.screenMetric());
     }
 
     private void requireNonNegative(Integer value) {
         if (value != null && value < 0) {
             throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
         }
+    }
+
+    private void requireDailyMinutes(Integer value) {
+        if (value != null && (value < 0 || value > DAILY_MINUTES_LIMIT)) {
+            throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
+        }
+    }
+
+    private void requireScreenMetric(Integer screenMinutes, ScreenMetric screenMetric) {
+        if ((screenMinutes == null) != (screenMetric == null)
+                || screenMetric != null && screenMetric != ScreenMetric.SEDENTARY_TV_EQUIVALENT) {
+            throw new AuthException(ErrorCode.INVALID_HEALTH_DATA);
+        }
+    }
+
+    private BigDecimal decimalHours(int minutes) {
+        return BigDecimal.valueOf(minutes)
+                .divide(MINUTES_PER_HOUR, INPUT_SCALE, RoundingMode.HALF_EVEN)
+                .stripTrailingZeros();
     }
 
     private void rejectCorrection(Integer current, Integer incoming) {

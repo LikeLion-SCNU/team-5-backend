@@ -24,10 +24,11 @@ kakao:
 openai:
   api-key: ${OPENAI_API_KEY:test-openai-api-key-fixture}
   meal-model: ${OPENAI_MEAL_MODEL:gpt-5-mini}
-  face-model: ${OPENAI_FACE_MODEL:gpt-5-mini}
+  image-model: ${OPENAI_IMAGE_MODEL:gpt-image-2}
   timeout: ${OPENAI_TIMEOUT:30s}
 
 web-push:
+  encryption-key: ${WEB_PUSH_ENCRYPTION_KEY:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
   vapid:
     public-key: ${VAPID_PUBLIC_KEY:test-vapid-public-key-fixture}
     private-key: ${VAPID_PRIVATE_KEY:test-vapid-private-key-fixture}

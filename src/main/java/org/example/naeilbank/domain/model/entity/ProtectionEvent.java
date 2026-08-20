@@ -60,6 +60,16 @@ public class ProtectionEvent {
     @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
     private Instant updatedAt;
 
+    public static ProtectionEvent create(UUID userId, EventType eventType, String detailJson, String idempotencyKey, Instant now) {
+        ProtectionEvent event = new ProtectionEvent();
+        event.userId = userId;
+        event.eventType = eventType;
+        event.detailJson = detailJson;
+        event.idempotencyKey = idempotencyKey;
+        event.createdAt = now;
+        return event;
+    }
+
     public enum EventType {
         manual_on,
         manual_off,

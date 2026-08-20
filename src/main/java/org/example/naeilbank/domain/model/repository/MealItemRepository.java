@@ -16,6 +16,16 @@ public interface MealItemRepository extends JpaRepository<MealItem, UUID> {
     List<MealItem> findByMealRecordIdOrderById(UUID mealRecordId);
 
     @Query("""
+            select i from MealItem i, MealRecord r
+            where i.mealRecordId = r.id and r.userId = :userId
+              and r.recordDate = :entryDate and r.status = :status and i.deleted = false
+            order by i.id
+            """)
+    List<MealItem> findOwnedActiveItemsForDate(@Param("userId") UUID userId,
+                                                @Param("entryDate") LocalDate entryDate,
+                                                @Param("status") MealStatus status);
+
+    @Query("""
             select case when count(i) > 0 then true else false end
             from MealItem i, MealRecord r
             where i.id = :eventId and i.mealRecordId = r.id

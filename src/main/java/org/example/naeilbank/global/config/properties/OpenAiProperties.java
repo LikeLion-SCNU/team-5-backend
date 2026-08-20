@@ -13,7 +13,7 @@ import java.time.Duration;
 public record OpenAiProperties(
         @NotBlank String apiKey,
         @NotBlank String mealModel,
-        @NotBlank String faceModel,
+        @NotBlank String imageModel,
         @NotNull Duration timeout,
         @NotNull URI responsesUri
 ) {
@@ -21,5 +21,12 @@ public record OpenAiProperties(
         if (responsesUri == null) {
             responsesUri = URI.create("https://api.openai.com/v1/responses");
         }
+    }
+
+    public URI baseUrl() {
+        String value = responsesUri.toString();
+        return value.endsWith("/responses")
+                ? URI.create(value.substring(0, value.length() - "/responses".length()))
+                : responsesUri;
     }
 }

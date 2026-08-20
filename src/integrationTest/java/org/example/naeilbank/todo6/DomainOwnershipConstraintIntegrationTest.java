@@ -37,8 +37,9 @@ class DomainOwnershipConstraintIntegrationTest {
                 """, owner, Date.valueOf(LocalDate.of(2026, 8, 20)), otherMealMedia))
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("""
-                insert into face_simulations (user_id, source_media_id, status)
-                values (?, ?, 'generating')
+                insert into face_simulations
+                    (user_id, source_media_id, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'cross-owner-source', 'test-hash')
                 """, owner, otherFaceMedia))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
@@ -50,8 +51,9 @@ class DomainOwnershipConstraintIntegrationTest {
         UUID secondUser = insertUser(jdbc, "face-other@example.com");
         UUID firstSource = insertMedia(jdbc, firstUser, "face_input", "11");
         UUID simulationId = jdbc.queryForObject("""
-                insert into face_simulations (user_id, source_media_id, status)
-                values (?, ?, 'generating') returning id
+                insert into face_simulations
+                    (user_id, source_media_id, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'owned-output-source', 'test-hash') returning id
                 """, UUID.class, firstUser, firstSource);
         UUID firstOutput = insertMedia(jdbc, firstUser, "face_output_current", "12");
         UUID secondOutput = insertMedia(jdbc, secondUser, "face_output_current", "13");
@@ -98,17 +100,20 @@ class DomainOwnershipConstraintIntegrationTest {
                 """, userId, Date.valueOf(LocalDate.of(2026, 8, 20)), faceInput))
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("""
-                insert into face_simulations (user_id, source_media_id, status)
-                values (?, ?, 'generating')
+                insert into face_simulations
+                    (user_id, source_media_id, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'meal-purpose-source', 'test-hash')
                 """, userId, mealInput)).isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("""
-                insert into face_simulations (user_id, source_media_id, status)
-                values (?, ?, 'generating')
+                insert into face_simulations
+                    (user_id, source_media_id, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'output-purpose-source', 'test-hash')
                 """, userId, currentOutput)).isInstanceOf(DataIntegrityViolationException.class);
 
         UUID simulationId = jdbc.queryForObject("""
-                insert into face_simulations (user_id, source_media_id, status)
-                values (?, ?, 'generating') returning id
+                insert into face_simulations
+                    (user_id, source_media_id, status, idempotency_key, request_hash)
+                values (?, ?, 'generating', 'valid-face-source', 'test-hash') returning id
                 """, UUID.class, userId, faceInput);
         assertThatThrownBy(() -> insertOutput(
                 jdbc, userId, simulationId, improvedOutput, "current"

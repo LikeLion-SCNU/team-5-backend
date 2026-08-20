@@ -24,10 +24,6 @@ import java.util.UUID;
         name = "media_blobs",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_media_blobs_user_purpose_sha256",
-                        columnNames = {"user_id", "purpose", "sha256"}
-                ),
-                @UniqueConstraint(
                         name = "uk_media_blobs_user_id_id",
                         columnNames = {"user_id", "id"}
                 )

@@ -19,8 +19,15 @@ public final class HealthDtos {
             @JsonProperty("record_date") @NotNull LocalDate recordDate,
             @JsonProperty("sleep_minutes") Integer sleepMinutes,
             Integer steps,
-            @JsonProperty("screen_minutes") Integer screenMinutes
+            @JsonProperty("moderate_activity_minutes") Integer moderateActivityMinutes,
+            @JsonProperty("screen_minutes") Integer screenMinutes,
+            @JsonProperty("screen_metric") ScreenMetric screenMetric
     ) {
+    }
+
+    public enum ScreenMetric {
+        @JsonProperty("sedentary_tv_equivalent")
+        SEDENTARY_TV_EQUIVALENT
     }
 
     public record HealthDailyResponse(
@@ -28,7 +35,9 @@ public final class HealthDtos {
             @JsonProperty("record_date") LocalDate recordDate,
             @JsonProperty("sleep_minutes") Integer sleepMinutes,
             Integer steps,
+            @JsonProperty("moderate_activity_minutes") Integer moderateActivityMinutes,
             @JsonProperty("screen_minutes") Integer screenMinutes,
+            @JsonProperty("screen_metric") ScreenMetric screenMetric,
             @JsonProperty("sync_status") HealthDaily.SyncStatus syncStatus,
             List<ConversionReceipt> conversions
     ) {
@@ -38,7 +47,9 @@ public final class HealthDtos {
                     healthDaily.getRecordDate(),
                     healthDaily.getSleepMinutes(),
                     healthDaily.getSteps(),
+                    healthDaily.getModerateActivityMinutes(),
                     healthDaily.getScreenMinutes(),
+                    healthDaily.getScreenMinutes() == null ? null : ScreenMetric.SEDENTARY_TV_EQUIVALENT,
                     healthDaily.getSyncStatus(),
                     conversions
             );

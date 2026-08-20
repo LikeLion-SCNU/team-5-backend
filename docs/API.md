@@ -64,7 +64,22 @@ GET /meals/{id} 응답:
 | GET | `/api/v1/ledger/statements?from=YYYY-MM-DD&to=YYYY-MM-DD&page=0&size=20` | 날짜 단위 일별 명세서 페이지 |
 | GET | `/api/v1/ledger/trends/daily?to=YYYY-MM-DD` | 종료일 기준 7일 일별 추세 |
 | GET | `/api/v1/ledger/trends/weekly?to=YYYY-MM-DD` | 종료일 포함 주 기준 4주 월요일 시작 추세 |
-| PUT | `/health/daily` | 건강 데이터 upsert `{record_date, sleep_minutes?, steps?, screen_minutes?}` → 환산 배치 트리거 (데모: 시드 주입용) |
+| PUT | `/health/daily` | 건강 데이터 upsert `{record_date, sleep_minutes?, steps?, screen_minutes?, screen_metric?}` → 환산 배치 트리거 (데모: 시드 주입용) |
+
+건강 환산 입력 계약:
+
+- `sleep_minutes < 420`인 날은 짧은 수면 범주 사건 1건(`per_unit`)으로 환산한다. 420분
+  이상은 수면 환산을 생성하지 않는다. 이 범주 규칙은 개인의 의학적 위험 예측이 아니다.
+- `steps` 원본은 그대로 저장하지만 환산 입력은 하루 최대 2,000걸음으로 제한해
+  `per_1000_steps`에 전달한다. 표준 `+30분/1,000걸음`은
+  100걸음/분으로 1,000걸음을 10분 활동으로 보고, `20분 활동당 +60분`을 적용한 파생
+  가정이다. 따라서 활동 입금은 하루 최대 +60분이며, 일반 총걸음 수는 중강도 활동의
+  대리값일 뿐 걸음 속도나 개인별 효과를 측정한 값이 아니다.
+- `screen_minutes`는 휴대전화·컴퓨터를 합산한 일반 화면 시간이 아니라 앉아서 시청한
+  **TV 상당 시청 시간**만 허용한다. 이 값을 보낼 때는
+  `screen_metric: "sedentary_tv_equivalent"`를 반드시 함께 보내야 하며, 없으면 요청 전체가
+  `INVALID_HEALTH_DATA`로 거부된다. 분 값은 소수 시간(`screen_minutes / 60`)으로 바뀌어
+  `per_hour` 규칙에 전달된다.
 
 `GET /api/v1/ledger/statements?from=2026-08-22&to=2026-08-22` 응답:
 ```json
@@ -120,9 +135,19 @@ ledger_entries는 append-only다. 보호 모드는 숫자·집계·행을 바꾸
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST | `/simulations` | multipart `{photo}` → 201 `{id, status:"generating"}` |
-| GET | `/simulations/{id}` | `{status: "generating"\|"done"\|"failed", result_current_url, result_improved_url, trend_desc}` |
-| DELETE | `/simulations/{id}` | 원본+결과 **하드 삭제** (스토리지 파일까지) + deletion_logs 기록 → 204 |
+| POST | `/api/v1/media/FACE_INPUT` | 목적별 동의 후 private 이미지 업로드 → 201 `{media:{id,...}}` |
+| POST | `/api/v1/face-simulations` | JSON `{sourceMediaId, idempotencyKey, trendDescription?, selfPhotoConfirmed:true, adultConfirmed:true, disclaimerAccepted:true}` → 202 |
+| GET | `/api/v1/face-simulations` | 본인 시뮬레이션 목록 |
+| GET | `/api/v1/face-simulations/{id}` | `queued\|generating\|processing\|done\|failed\|cancelled`, 모델·프롬프트 버전 및 `current`/`improved` 출력 메타데이터 |
+| POST | `/api/v1/face-simulations/{id}/cancel` | 대기·처리 중 작업 취소 |
+| GET · HEAD | `/api/v1/face-media/{id}` | 본인 private 원본/결과 이미지 조회 (`private, no-store`) |
+| DELETE | `/api/v1/face-simulations/{id}` | 시뮬레이션과 미공유 결과·원본 하드 삭제, audit tombstone 기록 → 반복 호출도 204 |
+| DELETE | `/api/v1/face-media/{id}` | 원본이면 연결된 시뮬레이션·파생 이미지까지 하드 삭제, audit tombstone 기록 → 반복 호출도 204 |
+
+규칙: 결과는 실제 미래 모습이나 의학적 결과를 예측하지 않는 설명용 예시다. OpenAI에는
+사용자 ID·이메일을 보내지 않고 검증된 본인 사진과 고정된 안전 프롬프트만 전송한다.
+작업은 최대 3회, backoff를 적용해 재시도하며 동의 철회·취소·삭제와 같은 사용자 단위
+잠금 순서를 사용한다. 모델은 `OPENAI_IMAGE_MODEL`로 주입하며 기본값은 `gpt-image-2`다.
 
 ## §7. 설정 · 보호 모드 · 동의 (F-RBRSJS, F-XIXCTJ, F-OAKCGW)
 

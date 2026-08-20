@@ -58,10 +58,11 @@ kakao:
 openai:
   api-key: test-openai-api-key-fixture
   meal-model: gpt-5-mini
-  face-model: gpt-5-mini
+  image-model: gpt-image-2
   timeout: 30s
 
 web-push:
+  encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
   vapid:
     public-key: test-vapid-public-key-fixture
     private-key: test-vapid-private-key-fixture

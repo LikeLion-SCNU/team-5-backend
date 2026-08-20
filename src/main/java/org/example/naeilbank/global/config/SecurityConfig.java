@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 사전 요청 허용
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/notifications/vapid-public-key").permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/join",
                                 "/api/v1/auth/login",
