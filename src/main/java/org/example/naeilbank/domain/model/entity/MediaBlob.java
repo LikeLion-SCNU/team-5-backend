@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -77,16 +78,23 @@ public class MediaBlob {
     private Instant deletedAt;
 
     public MediaBlob(UUID userId, Purpose purpose, String contentType, String sha256, byte[] content) {
-        this.userId = userId;
-        this.purpose = purpose;
-        this.contentType = contentType;
-        this.sha256 = sha256;
+        this.userId = Objects.requireNonNull(userId, "userId");
+        this.purpose = Objects.requireNonNull(purpose, "purpose");
+        this.contentType = Objects.requireNonNull(contentType, "contentType");
+        this.sha256 = Objects.requireNonNull(sha256, "sha256");
+        if (content == null || content.length == 0) {
+            throw new IllegalArgumentException("content must not be empty");
+        }
         this.content = Arrays.copyOf(content, content.length);
         this.sizeBytes = content.length;
     }
 
     public byte[] getContent() {
         return Arrays.copyOf(content, content.length);
+    }
+
+    public boolean isActive() {
+        return status == Status.active;
     }
 
     public enum Purpose {

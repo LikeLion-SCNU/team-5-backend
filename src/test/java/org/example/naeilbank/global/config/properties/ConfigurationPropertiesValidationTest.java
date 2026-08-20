@@ -41,6 +41,50 @@ class ConfigurationPropertiesValidationTest {
                             .isEqualTo(Duration.ofDays(14));
                     assertThat(context.getBean(CorsProperties.class).allowedOrigins())
                             .containsExactly("https://timebank.hbinserver.cloud");
+                    assertThat(context.getBean(CorsProperties.class).allowedHeaders())
+                            .contains("If-None-Match");
+                    assertThat(context.getBean(CorsProperties.class).exposedHeaders())
+                            .contains("ETag");
+                    assertThat(context.getBean(UploadProperties.class).maxInputSize().toBytes())
+                            .isEqualTo(10L * 1024 * 1024);
+                    assertThat(context.getEnvironment().getProperty(
+                            "spring.servlet.multipart.max-file-size"
+                    )).isEqualTo("10MB");
+                    assertThat(context.getEnvironment().getProperty(
+                            "spring.servlet.multipart.max-request-size"
+                    )).isEqualTo("11MB");
+                });
+    }
+
+    @Test
+    void rejectsUploadLimitsAboveDatabaseAndApiBounds() {
+        contextRunner
+                .withPropertyValues("UPLOAD_MAX_INPUT_SIZE=11MB")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("max-input-size must not exceed 10 MiB");
+                });
+        contextRunner
+                .withPropertyValues("UPLOAD_MAX_GENERATED_SIZE=21MB")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("max-generated-size must not exceed 20 MiB");
+                });
+        contextRunner
+                .withPropertyValues("UPLOAD_MAX_REQUEST_SIZE=12MB")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("max-request-size must accommodate input and not exceed 11 MiB");
+                });
+        contextRunner
+                .withPropertyValues("UPLOAD_MAX_REQUEST_SIZE=10MB")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(failureMessages(context.getStartupFailure()))
+                            .contains("max-request-size must accommodate input and not exceed 11 MiB");
                 });
     }
 

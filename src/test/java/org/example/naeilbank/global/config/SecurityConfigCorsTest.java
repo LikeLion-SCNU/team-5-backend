@@ -22,8 +22,8 @@ class SecurityConfigCorsTest {
                 true,
                 List.of("https://timebank.hbinserver.cloud", "http://localhost:5173"),
                 List.of("GET", "POST", "OPTIONS"),
-                List.of("Authorization", "Content-Type"),
-                List.of("Location")
+                List.of("Authorization", "Content-Type", "If-None-Match"),
+                List.of("Location", "ETag")
         );
         SecurityConfig securityConfig = new SecurityConfig(
                 mock(JwtAuthenticationFilter.class),
@@ -41,5 +41,7 @@ class SecurityConfigCorsTest {
                 .containsExactly("https://timebank.hbinserver.cloud", "http://localhost:5173");
         assertThat(configuration.getAllowedOrigins()).doesNotContain("*");
         assertThat(configuration.getAllowCredentials()).isTrue();
+        assertThat(configuration.getAllowedHeaders()).contains("If-None-Match");
+        assertThat(configuration.getExposedHeaders()).contains("ETag");
     }
 }

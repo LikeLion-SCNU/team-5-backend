@@ -30,8 +30,10 @@ app:
     allowed-headers:
       - Authorization
       - Content-Type
+      - If-None-Match
     exposed-headers:
       - Location
+      - ETag
   scheduling:
     morning-statement-cron: "0 0 8 * * *"
   upload:
