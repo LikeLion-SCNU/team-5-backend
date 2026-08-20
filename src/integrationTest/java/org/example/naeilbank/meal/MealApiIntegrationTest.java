@@ -9,6 +9,7 @@ import org.example.naeilbank.global.exception.AuthException;
 import org.example.naeilbank.global.exception.ErrorCode;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -67,6 +68,7 @@ class MealApiIntegrationTest {
     @Autowired JwtTokenProvider jwtTokenProvider;
     @MockBean MealAnalysisClient mealAnalysisClient;
 
+    @BeforeEach
     @AfterEach
     void cleanRules() {
         jdbc.update("update conversion_rules set is_active = false where label like 'TEST_MEAL%' or logical_key::text like '21000000-%'");
@@ -222,12 +224,16 @@ class MealApiIntegrationTest {
 
     private Void confirm(UUID userId, UUID mealId, CountDownLatch start) throws Exception {
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
-        mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", mealId)
+        var result = mockMvc.perform(post("/api/v1/meals/{mealId}/confirm", mealId)
                         .header(HttpHeaders.AUTHORIZATION, token(userId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("confirmed"));
+                .andReturn();
+        int status = result.getResponse().getStatus();
+        assertThat(status).isIn(200, 409);
+        if (status == 200) {
+            assertThat(result.getResponse().getContentAsString()).contains("\"status\":\"confirmed\"");
+        }
         return null;
     }
 

@@ -2,6 +2,7 @@ package org.example.naeilbank.health;
 
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -46,6 +47,7 @@ class HealthApiIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired JwtTokenProvider jwtTokenProvider;
 
+    @BeforeEach
     @AfterEach
     void cleanRules() {
         jdbc.update("update conversion_rules set is_active = false where label like 'TEST_HEALTH%' or logical_key::text like '21000000-%'");
@@ -56,19 +58,19 @@ class HealthApiIntegrationTest {
         UUID userId = user("health");
         grant(userId, "HEALTH_COLLECTION");
         rule("sleep", "per_unit", -36);
-        rule("activity", "per_1000_steps", 30);
+        rule("activity", "per_minute", 3);
         rule("screen_time", "per_hour", -22);
 
         upsert(userId, """
-                {"record_date":"2026-08-20","sleep_minutes":360,"steps":2500,"screen_minutes":90,
-                 "screen_metric":"sedentary_tv_equivalent"}
+                {"record_date":"2026-08-20","sleep_minutes":360,"steps":2500,"moderate_activity_minutes":30,
+                 "screen_minutes":90,"screen_metric":"sedentary_tv_equivalent"}
                 """).andExpect(status().isOk())
                 .andExpect(jsonPath("$.sync_status").value("synced"))
                 .andExpect(jsonPath("$.screen_metric").value("sedentary_tv_equivalent"))
                 .andExpect(jsonPath("$.conversions.length()").value(3));
         upsert(userId, """
-                {"record_date":"2026-08-20","sleep_minutes":360,"steps":2500,"screen_minutes":90,
-                 "screen_metric":"sedentary_tv_equivalent"}
+                {"record_date":"2026-08-20","sleep_minutes":360,"steps":2500,"moderate_activity_minutes":30,
+                 "screen_minutes":90,"screen_metric":"sedentary_tv_equivalent"}
                 """).andExpect(status().isOk())
                 .andExpect(jsonPath("$.conversions[0].replayed").value(true));
         upsert(userId, """
@@ -86,7 +88,7 @@ class HealthApiIntegrationTest {
         assertThat(count("ledger_entries", userId)).isEqualTo(3);
         assertThat(count("conversion_postings", userId)).isEqualTo(3);
         assertThat(postedInput(userId, "sleep")).isEqualTo("per_unit:1.000000000000");
-        assertThat(postedInput(userId, "activity")).isEqualTo("per_1000_steps:2000.000000000000");
+        assertThat(postedInput(userId, "activity")).isEqualTo("per_minute:20.000000000000");
         assertThat(postedInput(userId, "screen_time")).isEqualTo("per_hour:1.500000000000");
     }
 
@@ -108,7 +110,7 @@ class HealthApiIntegrationTest {
     void conversionFailureRollsBackHealthAndLedgerWrites() throws Exception {
         UUID userId = user("health-rollback");
         grant(userId, "HEALTH_COLLECTION");
-        rule("activity", "per_1000_steps", 7);
+        rule("activity", "per_minute", 7);
         jdbc.execute("""
                 create function fail_health_posting() returns trigger language plpgsql as $$
                 begin raise exception 'TEST_HEALTH posting failure'; end $$
@@ -119,7 +121,7 @@ class HealthApiIntegrationTest {
                 """);
         try {
             upsert(userId, """
-                    {"record_date":"2026-08-21","steps":1000}
+                    {"record_date":"2026-08-21","moderate_activity_minutes":10}
                     """).andExpect(status().isInternalServerError());
             assertThat(count("health_daily", userId)).isZero();
             assertThat(count("ledger_entries", userId)).isZero();
@@ -136,7 +138,7 @@ class HealthApiIntegrationTest {
         UUID other = user("health-other");
         grant(owner, "HEALTH_COLLECTION");
         grant(other, "HEALTH_COLLECTION");
-        rule("activity", "per_1000_steps", 7);
+        rule("activity", "per_minute", 7);
 
         upsert(owner, """
                 {"record_date":"2026-08-22","steps":1000}
