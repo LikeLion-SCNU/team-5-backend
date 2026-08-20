@@ -87,7 +87,8 @@ public class AccountDataService {
         rows += jdbc.update("delete from consents where user_id = ?", userId);
         rows += jdbc.update("delete from refresh_tokens where user_id = ?", userId);
         rows += jdbc.update("delete from balance_view_events where user_id = ?", userId);
-        rows += jdbc.update("delete from protection_events where user_id = ?", userId);
+        // protection_events는 불변 트리거(V3 trg_protection_events_immutable)로 보호되는 감사 로그라
+        // 삭제하지 않는다 — 계정 익명화로 개인 식별이 제거되므로 정책 문구("감사 목적 유지")와 일치.
         rows += jdbc.update("delete from protection_proposals where user_id = ?", userId);
         rows += jdbc.update("delete from plans where user_id = ?", userId);
         rows += jdbc.update("delete from media_blobs where user_id = ?", userId);
