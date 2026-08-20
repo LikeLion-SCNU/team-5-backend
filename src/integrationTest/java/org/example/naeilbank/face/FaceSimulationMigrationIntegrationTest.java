@@ -75,7 +75,7 @@ class FaceSimulationMigrationIntegrationTest {
              ResultSet version = connection.createStatement().executeQuery(
                      "select version from flyway_schema_history where success order by installed_rank desc limit 1")) {
             assertThat(version.next()).isTrue();
-            assertThat(version.getString(1)).isEqualTo("7");
+            assertThat(version.getString(1)).isEqualTo("8");
         }
     }
 

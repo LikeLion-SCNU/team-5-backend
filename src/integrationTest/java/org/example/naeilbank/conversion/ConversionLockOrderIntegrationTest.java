@@ -57,7 +57,7 @@ class ConversionLockOrderIntegrationTest {
     @BeforeEach
     @AfterEach
     void deactivateFixtureRules() {
-        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_FIXTURE%'");
+        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_FIXTURE%' or logical_key::text like '21000000-%'");
     }
 
     @Test

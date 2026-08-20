@@ -48,7 +48,7 @@ class HealthApiIntegrationTest {
 
     @AfterEach
     void cleanRules() {
-        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_HEALTH%'");
+        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_HEALTH%' or logical_key::text like '21000000-%'");
     }
 
     @Test

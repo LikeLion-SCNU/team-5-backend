@@ -69,7 +69,7 @@ class MealApiIntegrationTest {
 
     @AfterEach
     void cleanRules() {
-        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_MEAL%'");
+        jdbc.update("update conversion_rules set is_active = false where label like 'TEST_MEAL%' or logical_key::text like '21000000-%'");
     }
 
     @Test
