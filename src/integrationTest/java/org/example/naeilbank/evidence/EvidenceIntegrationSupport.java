@@ -3,6 +3,7 @@ package org.example.naeilbank.evidence;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.naeilbank.global.jwt.JwtTokenProvider;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,6 +43,19 @@ abstract class EvidenceIntegrationSupport {
     JdbcTemplate jdbcTemplate;
     @Autowired
     JwtTokenProvider jwtTokenProvider;
+
+    @BeforeEach
+    void cleanEvidenceData() {
+        jdbcTemplate.execute("""
+                truncate table
+                    ledger_entries,
+                    conversion_rules,
+                    sources,
+                    audit_events,
+                    users
+                restart identity cascade
+                """);
+    }
 
     UUID createUser(String role) {
         UUID id = UUID.randomUUID();

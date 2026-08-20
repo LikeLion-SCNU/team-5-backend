@@ -79,6 +79,9 @@ public class EvidenceService {
         List<Source> family = lockedSourceFamily(sourceId);
         Source previous = sourceMember(family, sourceId);
         requireVersion(previous.resourceVersion(), request.expectedVersion());
+        if (!family.get(family.size() - 1).getId().equals(sourceId)) {
+            throw new AuthException(ErrorCode.EVIDENCE_VERSION_CONFLICT);
+        }
         SourceContent content = EvidencePolicy.validate(request.content());
         int next = family.get(family.size() - 1).getVersionNumber() + 1;
         Instant now = Instant.now(clock);
@@ -125,6 +128,9 @@ public class EvidenceService {
         List<ConversionRule> family = lockedRuleFamily(ruleId);
         ConversionRule previous = ruleMember(family, ruleId);
         requireVersion(previous.resourceVersion(), request.expectedVersion());
+        if (!family.get(family.size() - 1).getId().equals(ruleId)) {
+            throw new AuthException(ErrorCode.EVIDENCE_VERSION_CONFLICT);
+        }
         int next = family.get(family.size() - 1).getVersionNumber() + 1;
         Instant now = Instant.now(clock);
         previous.markVersioned(now);
