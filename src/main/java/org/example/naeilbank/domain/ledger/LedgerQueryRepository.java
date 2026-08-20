@@ -3,7 +3,6 @@ package org.example.naeilbank.domain.ledger;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-@ConditionalOnBean(JdbcTemplate.class)
 public class LedgerQueryRepository {
     private final JdbcTemplate jdbc;
     private final NamedParameterJdbcTemplate namedJdbc;
