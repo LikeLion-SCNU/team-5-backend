@@ -50,7 +50,10 @@ public class EmailVerificationService {
 
     /** 코드를 발급해 사용자에 기록하고 메일을 보낸다. 발송 실패는 가입을 막지 않는다(재전송 가능). */
     public void issueAndSend(User user) {
-        failedAttempts.remove(user.getEmail());
+        // 실패 횟수는 코드를 새로 보내도 유지한다. 재전송으로 잠금을 풀 수 있으면 잠금이 아니다.
+        if (failedAttempts.getOrDefault(user.getEmail(), 0) >= MAX_VERIFY_ATTEMPTS) {
+            throw new AuthException(ErrorCode.VERIFICATION_CODE_EXPIRED);
+        }
         String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
         user.issueEmailVerification(code, Instant.now(clock).plus(CODE_TTL));
         send(user.getEmail(), user.getName(), code);

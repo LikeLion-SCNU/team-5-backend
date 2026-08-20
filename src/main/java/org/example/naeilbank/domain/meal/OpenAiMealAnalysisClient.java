@@ -23,7 +23,14 @@ public class OpenAiMealAnalysisClient implements MealAnalysisClient {
     private static final String PROMPT = """
             Analyze this meal image for a health ledger draft. Return only JSON matching the schema.
             Use FOOD with PER_SERVING for food and ALCOHOL with PER_DRINK for alcoholic drinks.
-            Set eligibility to FRUIT_OR_VEGETABLE only for an explicit fruit or vegetable serving.
+
+            "value" is the NUMBER OF STANDARD SERVINGS (or drinks) shown, almost always 1, and at most 20.
+            It is NOT grams, millilitres, or calories. A 210 g bowl of rice is value 1, not 210.
+            Never copy a weight or a number printed in the image into "value".
+            Put the human-readable amount in "portion" instead (e.g. "1공기 (210g)").
+
+            Set eligibility to FRUIT_OR_VEGETABLE for any serving whose main ingredient is a fruit or a
+            vegetable, including Korean vegetable side dishes such as 김치 or 나물, and salads.
             Set eligibility to NEUTRAL for every other food and every alcoholic drink.
             Do not include unsupported categories.
             Write food_name and portion in Korean (natural Korean dish names, e.g. "페퍼로니 피자", "1조각").
@@ -116,7 +123,12 @@ public class OpenAiMealAnalysisClient implements MealAnalysisClient {
                         "portion", Map.of("type", "string"),
                         "category", Map.of("type", "string", "enum", List.of("FOOD", "ALCOHOL")),
                         "unit", Map.of("type", "string", "enum", List.of("PER_SERVING", "PER_DRINK")),
-                        "value", Map.of("type", "number", "exclusiveMinimum", 0, "maximum", 1000),
+                        "value", Map.of(
+                                "type", "number",
+                                "description",
+                                "Number of standard servings or drinks, usually 1. Never grams or millilitres.",
+                                "exclusiveMinimum", 0,
+                                "maximum", 20),
                         "eligibility", Map.of("type", "string",
                                 "enum", List.of("FRUIT_OR_VEGETABLE", "NEUTRAL"))
                 )

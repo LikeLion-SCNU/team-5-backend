@@ -19,6 +19,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +45,9 @@ class HealthServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new HealthService(healthRepository, userRepository, consentGuard, conversionService);
+        // 테스트가 쓰는 기록 날짜(2026-08-20~23)가 모두 '오늘 이하'가 되도록 시계를 고정한다.
+        Clock clock = Clock.fixed(Instant.parse("2026-08-23T12:00:00Z"), ZoneId.of("Asia/Seoul"));
+        service = new HealthService(clock, healthRepository, userRepository, consentGuard, conversionService);
         when(userRepository.findByIdForUpdate(any())).thenReturn(Optional.of(mock(User.class)));
         when(healthRepository.findByUserIdAndRecordDateForUpdate(any(), any()))
                 .thenReturn(Optional.empty());
