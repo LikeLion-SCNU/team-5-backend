@@ -1,6 +1,6 @@
 # 내일은행 API 명세 v1
 
-> 기준: 매니패스트 기능명세 v12 + DB 설계서 v1.1 | 모든 경로는 `/api` 프록시 뒤 (프론트는 상대경로 `/api/...`로 호출)
+> 기준: 매니패스트 기능명세 v14 · 인증 경로는 실구현(/api/v1/auth/*) 반영 + DB 설계서 v1.1 | 모든 경로는 `/api` 프록시 뒤 (프론트는 상대경로 `/api/...`로 호출)
 > 인증: `Authorization: Bearer {access_token}` (🔓 표시 = 인증 불필요)
 > 에러 형식 통일: `{"error": {"code": "string", "message": "사용자용 한국어 메시지"}}`
 
@@ -15,11 +15,11 @@
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST 🔓 | `/auth/signup` | 이메일 가입 `{email, password, nickname}` → 201 + 토큰 |
-| POST 🔓 | `/auth/login` | 이메일 로그인 `{email, password}` → 토큰 |
-| POST 🔓 | `/auth/kakao` | 카카오 로그인 `{code}` (인가코드) → 토큰, 신규면 자동 가입 |
-| POST 🔓 | `/auth/refresh` | `{refresh_token}` → 새 토큰 쌍 (기존 리프레시 회전 폐기) |
-| POST | `/auth/logout` | `{refresh_token}` → 204, 토큰 폐기 |
+| POST 🔓 | `/api/v1/auth/join` | 이메일 가입 `{email, password, nickname}` → 201 + 토큰 |
+| POST 🔓 | `/api/v1/auth/login` | 이메일 로그인 `{email, password}` → 토큰 |
+| POST 🔓 | `/api/v1/auth/kakao` | 카카오 로그인 `{code}` (인가코드) → 토큰, 신규면 자동 가입 |
+| POST 🔓 | `/api/v1/auth/refresh` | `{refresh_token}` → 새 토큰 쌍 (기존 리프레시 회전 폐기) |
+| POST | `/api/v1/auth/logout` | `{refresh_token}` → 204, 토큰 폐기 |
 
 토큰 응답 공통:
 ```json
