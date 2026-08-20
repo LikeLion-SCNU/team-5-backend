@@ -1,5 +1,6 @@
 package org.example.naeilbank;
 
+import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
 import org.example.naeilbank.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
@@ -24,6 +25,9 @@ class NaeilBankBackApplicationTests {
 
     @MockBean
     private UserRepository userRepository;
+
+    @MockBean
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     void contextLoads() {

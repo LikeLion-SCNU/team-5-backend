@@ -1,5 +1,6 @@
 package org.example.naeilbank.global.config;
 
+import org.example.naeilbank.domain.auth.repository.RefreshTokenRepository;
 import org.example.naeilbank.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ class DevProfileSecurityHealthTest {
 
     @MockBean
     private UserRepository userRepository;
+
+    @MockBean
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     void devProfileHealthEndpointIsPublicWithFixtureConfiguration() throws Exception {

@@ -3,7 +3,10 @@ package org.example.naeilbank.global.config;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.example.naeilbank.global.config.properties.CorsProperties;
+import org.example.naeilbank.global.exception.ErrorCode;
+import org.example.naeilbank.global.exception.SecurityErrorResponseWriter;
 import org.example.naeilbank.global.jwt.JwtAuthenticationFilter;
+import org.example.naeilbank.global.security.AuthRateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,7 +31,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final AuthRateLimitFilter authRateLimitFilter;
     private final CorsProperties corsProperties;
+    private final SecurityErrorResponseWriter securityErrorResponseWriter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -42,24 +47,29 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // OPTIONS 사전 요청 허용
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()             // 로그인, 회원가입 허용
+                        .requestMatchers(
+                                "/api/v1/auth/join",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/logout",
+                                "/api/v1/auth/kakao"
+                        ).permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
-                            // permitAll() 경로가 아닌 진짜 인증 필요한 API에 토큰 없이 접근했을 때만 동작
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\": \"인증이 필요하거나 유효하지 않은 토큰입니다.\"}");
+                            Object errorCode = request.getAttribute("auth.errorCode");
+                            securityErrorResponseWriter.write(
+                                    request,
+                                    response,
+                                    errorCode instanceof ErrorCode code ? code : ErrorCode.AUTHENTICATION_REQUIRED
+                            );
                         })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            // 권한 부족 시에만 동작
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json;charset=UTF-8");
-                            response.getWriter().write("{\"message\": \"해당 자원에 접근할 권한이 없습니다.\"}");
-                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                securityErrorResponseWriter.write(request, response, ErrorCode.ACCESS_DENIED))
                 )
+                .addFilterBefore(authRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -3,7 +3,9 @@ package org.example.naeilbank.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -11,29 +13,72 @@ import java.time.LocalTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class User extends BaseTimeEntity {
+public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    private UUID id;
 
     @Column(nullable = false, unique = true)
     private String email;
 
-    private String password;
-    private String name;
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(name = "nickname")
+    private String nickname;
+
+    @Column(name = "auth_provider", nullable = false)
+    private String authProvider;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
     private Role role = Role.USER;
 
-    @Enumerated(EnumType.STRING)
-    private Provider provider;
+    @Column(name = "notify_enabled", nullable = false)
+    @Builder.Default
+    private Boolean notifyEnabled = true;
 
-    private LocalTime notifyTime; // 기본값 08:00
+    @Column(name = "notify_time", nullable = false)
+    @Builder.Default
+    private LocalTime notifyTime = LocalTime.of(8, 0); // 기본값 08:00
 
-    private Boolean protectionMode; // 보호 모드 여부 (기본값 false)
+    @Column(name = "protection_mode", nullable = false)
+    @Builder.Default
+    private Boolean protectionMode = false; // 보호 모드 여부 (기본값 false)
 
-    public User(String email, String password){
-        this.email = email;
-        this.password = password;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private Instant createdAt = Instant.now();
+
+    public static User local(String email, String passwordHash) {
+        return User.builder()
+                .email(email)
+                .passwordHash(passwordHash)
+                .authProvider("email")
+                .role(Role.USER)
+                .notifyEnabled(true)
+                .notifyTime(LocalTime.of(8, 0))
+                .protectionMode(false)
+                .createdAt(Instant.now())
+                .build();
+    }
+
+    public static User kakao(String email, String nickname, String passwordHash) {
+        return User.builder()
+                .email(email)
+                .nickname(nickname)
+                .passwordHash(passwordHash)
+                .authProvider("kakao")
+                .role(Role.USER)
+                .notifyEnabled(true)
+                .notifyTime(LocalTime.of(8, 0))
+                .protectionMode(false)
+                .createdAt(Instant.now())
+                .build();
+    }
+
+    public String getPassword() {
+        return passwordHash;
     }
 }

@@ -1,7 +1,9 @@
 package org.example.naeilbank.global.config;
 
 import org.example.naeilbank.global.config.properties.CorsProperties;
+import org.example.naeilbank.global.exception.SecurityErrorResponseWriter;
 import org.example.naeilbank.global.jwt.JwtAuthenticationFilter;
+import org.example.naeilbank.global.security.AuthRateLimitFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -23,10 +25,15 @@ class SecurityConfigCorsTest {
                 List.of("Authorization", "Content-Type"),
                 List.of("Location")
         );
-        SecurityConfig securityConfig = new SecurityConfig(mock(JwtAuthenticationFilter.class), corsProperties);
+        SecurityConfig securityConfig = new SecurityConfig(
+                mock(JwtAuthenticationFilter.class),
+                mock(AuthRateLimitFilter.class),
+                corsProperties,
+                mock(SecurityErrorResponseWriter.class)
+        );
 
         CorsConfigurationSource source = securityConfig.corsConfigurationSource();
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/auth/login");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/auth/login");
         CorsConfiguration configuration = source.getCorsConfiguration(request);
 
         assertThat(configuration).isNotNull();

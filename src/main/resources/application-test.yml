@@ -8,6 +8,11 @@ spring:
 app:
   jwt:
     secret: ${JWT_SECRET:test-jwt-secret-fixture-32-bytes-minimum}
+  auth:
+    rate-limit:
+      capacity: ${AUTH_RATE_LIMIT_CAPACITY:5}
+      window: ${AUTH_RATE_LIMIT_WINDOW:1m}
+      max-buckets: ${AUTH_RATE_LIMIT_MAX_BUCKETS:100}
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
 

@@ -28,10 +28,19 @@ management:
         enabled: true
       show-details: never
 
+kakao:
+  token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
+  user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+
 app:
   jwt:
     access-token-ttl: 30m
     refresh-token-ttl: 14d
+  auth:
+    rate-limit:
+      capacity: ${AUTH_RATE_LIMIT_CAPACITY:20}
+      window: ${AUTH_RATE_LIMIT_WINDOW:1m}
+      max-buckets: ${AUTH_RATE_LIMIT_MAX_BUCKETS:10000}
   scheduling:
     morning-statement-cron: "0 0 8 * * *"
   upload:

@@ -34,7 +34,7 @@ public class KakaoOAuthService {
 
         try {
             ResponseEntity<String> response = rt.exchange(
-                    "https://kauth.kakao.com/oauth/token",
+                    kakaoProperties.tokenUri(),
                     HttpMethod.POST,
                     kakaoTokenRequest,
                     String.class
@@ -62,7 +62,7 @@ public class KakaoOAuthService {
 
         try {
             ResponseEntity<String> response = rt.exchange(
-                    "https://kapi.kakao.com/v2/user/me",
+                    kakaoProperties.userInfoUri(),
                     HttpMethod.POST,
                     kakaoProfileRequest,
                     String.class

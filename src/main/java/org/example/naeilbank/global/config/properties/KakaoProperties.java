@@ -9,6 +9,8 @@ import org.springframework.validation.annotation.Validated;
 public record KakaoProperties(
         @NotBlank String clientId,
         @NotBlank String redirectUri,
-        @NotBlank String clientSecret
+        @NotBlank String clientSecret,
+        @NotBlank String tokenUri,
+        @NotBlank String userInfoUri
 ) {
 }

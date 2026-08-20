@@ -1,10 +1,13 @@
 package org.example.naeilbank.global.jwt;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.example.naeilbank.global.config.properties.JwtProperties;
+import org.example.naeilbank.global.exception.AuthException;
+import org.example.naeilbank.global.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,8 +18,10 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
@@ -36,14 +41,14 @@ public class JwtTokenProvider {
         this.secretKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String createToken(Long userId, String email, String role) {
+    public String createToken(UUID userId, String email, String role) {
         Instant now = clock.instant();
         Instant expiry = now.plus(jwtProperties.accessTokenTtl());
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
-                .claim("role", role)
+                .claim("role", normalizeAuthority(role))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
                 .signWith(secretKey)
@@ -54,6 +59,7 @@ public class JwtTokenProvider {
         try {
             Jwts.parser()
                     .verifyWith(secretKey)
+                    .clock(() -> Date.from(clock.instant()))
                     .build()
                     .parseSignedClaims(token);
             return true;
@@ -62,8 +68,16 @@ public class JwtTokenProvider {
         }
     }
 
+    public Duration accessTokenTtl() {
+        return jwtProperties.accessTokenTtl();
+    }
+
+    public Duration refreshTokenTtl() {
+        return jwtProperties.refreshTokenTtl();
+    }
+
     public Authentication getAuthentication(String token) {
-        Claims claims = getClaims(token);
+        Claims claims = parseClaims(token);
         String role = claims.get("role", String.class);
 
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
@@ -75,11 +89,25 @@ public class JwtTokenProvider {
         );
     }
 
-    private Claims getClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+    public Claims parseClaims(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(secretKey)
+                    .clock(() -> Date.from(clock.instant()))
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (ExpiredJwtException e) {
+            throw new AuthException(ErrorCode.ACCESS_TOKEN_EXPIRED);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new AuthException(ErrorCode.INVALID_ACCESS_TOKEN);
+        }
+    }
+
+    private String normalizeAuthority(String role) {
+        if (role == null || role.isBlank()) {
+            return "ROLE_USER";
+        }
+        return role.startsWith("ROLE_") ? role : "ROLE_" + role;
     }
 }

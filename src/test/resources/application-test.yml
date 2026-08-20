@@ -18,6 +18,11 @@ app:
     secret: test-jwt-secret-fixture-32-bytes-minimum
     access-token-ttl: 30m
     refresh-token-ttl: 14d
+  auth:
+    rate-limit:
+      capacity: 5
+      window: 1m
+      max-buckets: 100
   cors:
     allow-credentials: true
     allowed-origins:
