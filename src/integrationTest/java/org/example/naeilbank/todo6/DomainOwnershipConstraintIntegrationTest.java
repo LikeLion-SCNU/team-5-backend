@@ -131,7 +131,7 @@ class DomainOwnershipConstraintIntegrationTest {
                 insert into media_blobs
                     (user_id, purpose, content_type, size_bytes, sha256, content)
                 values (?, ?, 'image/jpeg', ?, ?, ?) returning id
-                """, UUID.class, userId, (long) content.length, sha, content);
+                """, UUID.class, userId, purpose, (long) content.length, sha, content);
     }
 
     private void insertOutput(

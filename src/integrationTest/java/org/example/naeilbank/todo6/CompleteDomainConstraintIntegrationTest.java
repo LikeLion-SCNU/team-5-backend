@@ -136,7 +136,7 @@ class CompleteDomainConstraintIntegrationTest {
                 insert into media_blobs
                     (user_id, purpose, content_type, size_bytes, sha256, content)
                 values (?, ?, 'image/jpeg', ?, ?, ?) returning id
-                """, UUID.class, userId, (long) content.length,
+                """, UUID.class, userId, purpose, (long) content.length,
                 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", content);
     }
 
