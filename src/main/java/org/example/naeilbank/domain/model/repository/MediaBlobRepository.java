@@ -17,6 +17,13 @@ public interface MediaBlobRepository extends Repository<MediaBlob, UUID> {
             MediaBlob.Status status
     );
 
+    Optional<MediaBlob> findByIdAndUserIdAndPurposeAndStatus(
+            UUID id,
+            UUID userId,
+            MediaBlob.Purpose purpose,
+            MediaBlob.Status status
+    );
+
     @Query("""
             select m.id as id,
                    m.purpose as purpose,

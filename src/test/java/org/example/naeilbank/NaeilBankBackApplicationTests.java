@@ -6,6 +6,8 @@ import org.example.naeilbank.domain.ledger.LedgerQueryRepository;
 import org.example.naeilbank.domain.model.repository.AuditEventRepository;
 import org.example.naeilbank.domain.model.repository.ConsentRepository;
 import org.example.naeilbank.domain.model.repository.ConversionRuleRepository;
+import org.example.naeilbank.domain.model.repository.FaceSimulationOutputRepository;
+import org.example.naeilbank.domain.model.repository.FaceSimulationRepository;
 import org.example.naeilbank.domain.model.repository.HealthDailyRepository;
 import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
 import org.example.naeilbank.domain.model.repository.MealItemRepository;
@@ -48,6 +50,12 @@ class NaeilBankBackApplicationTests {
 
     @MockBean
     private MediaBlobRepository mediaBlobRepository;
+
+    @MockBean
+    private FaceSimulationRepository faceSimulationRepository;
+
+    @MockBean
+    private FaceSimulationOutputRepository faceSimulationOutputRepository;
 
     @MockBean
     private SourceRepository sourceRepository;

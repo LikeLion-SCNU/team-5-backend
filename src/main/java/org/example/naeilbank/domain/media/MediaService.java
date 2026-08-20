@@ -65,6 +65,24 @@ public class MediaService implements GeneratedMediaStore {
         return store(userId, purpose.storedPurpose(), image.contentType(), content);
     }
 
+    @Transactional
+    public StoredMedia storeGeneratedUnique(
+            UUID userId,
+            GeneratedPurpose purpose,
+            String contentType,
+            byte[] content
+    ) {
+        lockUser(userId);
+        consentGuard.requireGranted(userId, Consent.Purpose.FACE_AI);
+        long maxBytes = uploadProperties.maxGeneratedSize().toBytes();
+        ImageValidator.ValidatedImage image = imageValidator.validate(content, contentType, maxBytes);
+        String sha256 = sha256(content);
+        MediaBlob saved = mediaBlobRepository.saveAndFlush(
+                new MediaBlob(userId, purpose.storedPurpose(), image.contentType(), sha256, content)
+        );
+        return new StoredMedia(MediaMetadata.from(saved), false);
+    }
+
     @Transactional(readOnly = true)
     public MediaMetadata metadata(UUID userId, UUID mediaId) {
         return mediaBlobRepository.findMetadata(mediaId, userId, MediaBlob.Status.active)
