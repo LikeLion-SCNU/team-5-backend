@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface MealItemRepository extends JpaRepository<MealItem, UUID> {
     List<MealItem> findByMealRecordIdAndDeletedFalse(UUID mealRecordId);
 
+    List<MealItem> findByMealRecordIdOrderById(UUID mealRecordId);
+
     @Query("""
             select case when count(i) > 0 then true else false end
             from MealItem i, MealRecord r

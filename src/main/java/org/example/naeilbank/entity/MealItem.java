@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -37,4 +38,24 @@ public class MealItem {
 
     @Column(name = "is_user_added", nullable = false)
     private boolean userAdded;
+
+    public MealItem(UUID mealRecordId, String foodName, String portion, int estMinutes, boolean userAdded) {
+        this.mealRecordId = Objects.requireNonNull(mealRecordId, "mealRecordId");
+        if (foodName == null || foodName.isBlank()) {
+            throw new IllegalArgumentException("foodName must not be blank");
+        }
+        this.foodName = foodName;
+        this.portion = portion;
+        this.estMinutes = estMinutes;
+        this.userAdded = userAdded;
+        this.deleted = false;
+    }
+
+    public void markDeleted() {
+        this.deleted = true;
+    }
+
+    public void assignRule(UUID ruleId) {
+        this.ruleId = Objects.requireNonNull(ruleId, "ruleId");
+    }
 }

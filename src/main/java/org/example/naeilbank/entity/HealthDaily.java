@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -44,6 +45,35 @@ public class HealthDaily {
     @Enumerated(EnumType.STRING)
     @Column(name = "sync_status", nullable = false)
     private SyncStatus syncStatus = SyncStatus.synced;
+
+    public HealthDaily(UUID userId, LocalDate recordDate) {
+        this.userId = Objects.requireNonNull(userId, "userId");
+        this.recordDate = Objects.requireNonNull(recordDate, "recordDate");
+    }
+
+    public void replace(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+        this.sleepMinutes = sleepMinutes;
+        this.steps = steps;
+        this.screenMinutes = screenMinutes;
+        this.syncStatus = syncStatus(sleepMinutes, steps, screenMinutes);
+    }
+
+    private SyncStatus syncStatus(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+        int present = 0;
+        if (sleepMinutes != null) {
+            present++;
+        }
+        if (steps != null) {
+            present++;
+        }
+        if (screenMinutes != null) {
+            present++;
+        }
+        if (present == 0) {
+            return SyncStatus.missing;
+        }
+        return present == 3 ? SyncStatus.synced : SyncStatus.partial;
+    }
 
     public enum SyncStatus {
         synced,

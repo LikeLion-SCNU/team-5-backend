@@ -11,6 +11,7 @@ import org.example.naeilbank.domain.model.repository.LedgerEntryRepository;
 import org.example.naeilbank.domain.model.repository.MealItemRepository;
 import org.example.naeilbank.domain.model.repository.MediaBlobRepository;
 import org.example.naeilbank.domain.model.repository.SourceRepository;
+import org.example.naeilbank.domain.meal.MealService;
 import org.example.naeilbank.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration;
@@ -68,6 +69,9 @@ class NaeilBankBackApplicationTests {
 
     @MockBean
     private LedgerQueryRepository ledgerQueryRepository;
+
+    @MockBean
+    private MealService mealService;
 
     @Test
     void contextLoads() {
