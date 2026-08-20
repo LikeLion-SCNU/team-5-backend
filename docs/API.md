@@ -1,4 +1,4 @@
-# 내일은행 API 명세 v1
+# 시간은행 API 명세 v1
 
 > 기준: 매니패스트 기능명세 v14 · 인증 경로는 실구현(/api/v1/auth/*) 반영 + DB 설계서 v1.1 | 모든 경로는 `/api` 프록시 뒤 (프론트는 상대경로 `/api/...`로 호출)
 > 인증: `Authorization: Bearer {access_token}` (🔓 표시 = 인증 불필요)
