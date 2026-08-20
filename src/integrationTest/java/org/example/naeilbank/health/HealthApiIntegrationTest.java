@@ -55,17 +55,20 @@ class HealthApiIntegrationTest {
     void supportedInputsAreUserDateIdempotentAndLedgerPostsReplayOnce() throws Exception {
         UUID userId = user("health");
         grant(userId, "HEALTH_COLLECTION");
-        rule("sleep", "per_minute", 1);
-        rule("activity", "per_1000_steps", 7);
-        rule("screen_time", "per_minute", -1);
+        rule("sleep", "per_unit", -36);
+        rule("activity", "per_1000_steps", 30);
+        rule("screen_time", "per_hour", -22);
 
         upsert(userId, """
-                {"record_date":"2026-08-20","sleep_minutes":480,"steps":2500,"screen_minutes":60}
+                {"record_date":"2026-08-20","sleep_minutes":360,"steps":2500,"screen_minutes":90,
+                 "screen_metric":"sedentary_tv_equivalent"}
                 """).andExpect(status().isOk())
                 .andExpect(jsonPath("$.sync_status").value("synced"))
+                .andExpect(jsonPath("$.screen_metric").value("sedentary_tv_equivalent"))
                 .andExpect(jsonPath("$.conversions.length()").value(3));
         upsert(userId, """
-                {"record_date":"2026-08-20","sleep_minutes":480,"steps":2500,"screen_minutes":60}
+                {"record_date":"2026-08-20","sleep_minutes":360,"steps":2500,"screen_minutes":90,
+                 "screen_metric":"sedentary_tv_equivalent"}
                 """).andExpect(status().isOk())
                 .andExpect(jsonPath("$.conversions[0].replayed").value(true));
         upsert(userId, """
@@ -82,6 +85,23 @@ class HealthApiIntegrationTest {
                 Integer.class, userId)).isEqualTo(2500);
         assertThat(count("ledger_entries", userId)).isEqualTo(3);
         assertThat(count("conversion_postings", userId)).isEqualTo(3);
+        assertThat(postedInput(userId, "sleep")).isEqualTo("per_unit:1.000000000000");
+        assertThat(postedInput(userId, "activity")).isEqualTo("per_1000_steps:2000.000000000000");
+        assertThat(postedInput(userId, "screen_time")).isEqualTo("per_hour:1.500000000000");
+    }
+
+    @Test
+    void genericScreenMinutesWithoutTvEquivalentMetricFailClosed() throws Exception {
+        UUID userId = user("health-generic-screen");
+        grant(userId, "HEALTH_COLLECTION");
+
+        upsert(userId, """
+                {"record_date":"2026-08-23","screen_minutes":90}
+                """).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_HEALTH_DATA"));
+
+        assertThat(count("health_daily", userId)).isZero();
+        assertThat(count("conversion_postings", userId)).isZero();
     }
 
     @Test
@@ -171,6 +191,13 @@ class HealthApiIntegrationTest {
 
     private int count(String table, UUID userId) {
         return jdbc.queryForObject("select count(*) from " + table + " where user_id = ?", Integer.class, userId);
+    }
+
+    private String postedInput(UUID userId, String habit) {
+        return jdbc.queryForObject("""
+                select input_unit || ':' || input_value::text
+                from conversion_postings where user_id = ? and habit_type = ?
+                """, String.class, userId, habit);
     }
 
     private String token(UUID userId) {

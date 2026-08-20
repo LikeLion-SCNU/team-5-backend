@@ -39,6 +39,9 @@ public class HealthDaily {
     @Column(name = "steps")
     private Integer steps;
 
+    @Column(name = "moderate_activity_minutes")
+    private Integer moderateActivityMinutes;
+
     @Column(name = "screen_minutes")
     private Integer screenMinutes;
 
@@ -51,23 +54,30 @@ public class HealthDaily {
         this.recordDate = Objects.requireNonNull(recordDate, "recordDate");
     }
 
-    public void mergeMissing(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+    public void mergeMissing(Integer sleepMinutes, Integer steps,
+                             Integer moderateActivityMinutes, Integer screenMinutes) {
         this.sleepMinutes = merge(this.sleepMinutes, sleepMinutes);
         this.steps = merge(this.steps, steps);
+        this.moderateActivityMinutes = merge(this.moderateActivityMinutes, moderateActivityMinutes);
         this.screenMinutes = merge(this.screenMinutes, screenMinutes);
-        this.syncStatus = syncStatus(this.sleepMinutes, this.steps, this.screenMinutes);
+        this.syncStatus = syncStatus(this.sleepMinutes, this.steps,
+                this.moderateActivityMinutes, this.screenMinutes);
     }
 
     private Integer merge(Integer current, Integer incoming) {
         return current == null ? incoming : current;
     }
 
-    private SyncStatus syncStatus(Integer sleepMinutes, Integer steps, Integer screenMinutes) {
+    private SyncStatus syncStatus(Integer sleepMinutes, Integer steps,
+                                  Integer moderateActivityMinutes, Integer screenMinutes) {
         int present = 0;
         if (sleepMinutes != null) {
             present++;
         }
         if (steps != null) {
+            present++;
+        }
+        if (moderateActivityMinutes != null) {
             present++;
         }
         if (screenMinutes != null) {
@@ -76,7 +86,7 @@ public class HealthDaily {
         if (present == 0) {
             return SyncStatus.missing;
         }
-        return present == 3 ? SyncStatus.synced : SyncStatus.partial;
+        return present == 4 ? SyncStatus.synced : SyncStatus.partial;
     }
 
     public enum SyncStatus {
