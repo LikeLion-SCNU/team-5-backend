@@ -5,20 +5,32 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+import java.util.UUID;
+
 @Entity
 @Table(name = "sources")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Source extends BaseTimeEntity {
+public class Source {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false)
     private String title;
 
-    @Column(name = "doi_url", nullable = false, length = 500)
+    @Column(name = "authors")
+    private String authors;
+
+    @Column(name = "journal")
+    private String journal;
+
+    @Column(name = "pub_year")
+    private Integer publicationYear;
+
+    @Column(name = "doi_url", length = 500)
     private String doiUrl;
 
     @Column(name = "summary_ko", columnDefinition = "TEXT")
@@ -28,5 +40,8 @@ public class Source extends BaseTimeEntity {
     private String limitationsKo;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    private boolean active = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 }

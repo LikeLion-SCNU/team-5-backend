@@ -5,24 +5,36 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.UUID;
+
 @Entity
 @Table(name = "meal_records")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class MealRecord extends BaseTimeEntity {
+public class MealRecord {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
 
-    @Column(name = "image_url")
-    private String imageUrl;
+    @Column(name = "record_date", nullable = false)
+    private LocalDate recordDate;
+
+    @Column(name = "media_blob_id", nullable = false)
+    private UUID mediaBlobId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private MealStatus status = MealStatus.ANALYZING;
+    private MealStatus status = MealStatus.analyzing;
+
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 }

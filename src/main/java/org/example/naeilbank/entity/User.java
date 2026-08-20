@@ -30,6 +30,9 @@ public class User {
     @Column(name = "auth_provider", nullable = false)
     private String authProvider;
 
+    @Column(name = "kakao_id", unique = true)
+    private String kakaoId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -37,7 +40,7 @@ public class User {
 
     @Column(name = "notify_enabled", nullable = false)
     @Builder.Default
-    private Boolean notifyEnabled = true;
+    private boolean notifyEnabled = true;
 
     @Column(name = "notify_time", nullable = false)
     @Builder.Default
@@ -45,7 +48,7 @@ public class User {
 
     @Column(name = "protection_mode", nullable = false)
     @Builder.Default
-    private Boolean protectionMode = false; // 보호 모드 여부 (기본값 false)
+    private boolean protectionMode = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
