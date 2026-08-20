@@ -151,14 +151,14 @@ class MealApiIntegrationTest {
                 UUID.class, userId);
         assertThat(mealStatus(mealId)).isEqualTo("analyzing");
 
-        jdbc.update("update consents set granted = false, withdrawn_at = now() where user_id = ? and purpose = 'MEAL_AI'",
+        jdbc.update("update consents set granted = false, revoked_at = now() where user_id = ? and purpose = 'MEAL_AI'",
                 userId);
         mockMvc.perform(post("/api/v1/meals/{mealId}/analyze", mealId)
                         .header(HttpHeaders.AUTHORIZATION, token(userId)))
                 .andExpect(status().isForbidden());
         verify(mealAnalysisClient, times(1)).analyze(eq("image/png"), any());
 
-        jdbc.update("update consents set granted = true, withdrawn_at = null where user_id = ? and purpose = 'MEAL_AI'",
+        jdbc.update("update consents set granted = true, revoked_at = null where user_id = ? and purpose = 'MEAL_AI'",
                 userId);
         mockMvc.perform(post("/api/v1/meals/{mealId}/analyze", mealId)
                         .header(HttpHeaders.AUTHORIZATION, token(userId)))
