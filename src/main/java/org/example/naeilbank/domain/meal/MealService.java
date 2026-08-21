@@ -209,8 +209,11 @@ public class MealService {
         if (media.purpose() != MediaBlob.Purpose.meal_input) {
             throw new AuthException(ErrorCode.INVALID_MEAL_REQUEST);
         }
+        // 아직 확정하지 않은 기록만 이어서 쓴다. 이미 확정·제외된 기록은 다른 끼니이므로 새로 만든다.
         MealRecord record = mealRecordRepository
-                .findByUserIdAndMediaBlobIdForUpdate(userId, request.mediaBlobId())
+                .findUnconfirmedByUserIdAndMediaBlobIdForUpdate(userId, request.mediaBlobId())
+                .stream()
+                .findFirst()
                 .orElseGet(() -> mealRecordRepository.saveAndFlush(
                         new MealRecord(userId, request.recordDate(), request.mediaBlobId(), Instant.now(clock))));
         return record.getId();

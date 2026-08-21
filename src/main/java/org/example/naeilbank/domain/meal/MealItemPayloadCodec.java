@@ -46,8 +46,12 @@ public class MealItemPayloadCodec {
     StoredPortion decode(String raw) {
         try {
             StoredPortion portion = objectMapper.readValue(raw, StoredPortion.class);
+            // 저장된 항목은 읽기 경로이므로, 과거에 상한을 넘겨 저장된 값이 있어도
+            // 조회 자체가 막히지 않도록 상한으로 클램프한다(신규 입력은 encode에서 여전히 거부).
+            BigDecimal boundedValue = portion.value() == null ? null
+                    : portion.value().min(MAX_SERVINGS_PER_ITEM);
             StoredPortion normalized = new StoredPortion(portion.label(), portion.category(), portion.unit(),
-                    portion.value(), normalize(portion.eligibility()));
+                    boundedValue, normalize(portion.eligibility()));
             validate(normalized.category(), normalized.unit(), normalized.value(), normalized.eligibility());
             return normalized;
         } catch (Exception e) {

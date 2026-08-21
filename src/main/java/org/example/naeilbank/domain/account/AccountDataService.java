@@ -41,7 +41,7 @@ public class AccountDataService {
                         0L),
                 new DataCategory("face", "시뮬레이션 결과",
                         count("select count(*) from face_simulations where user_id = ?", userId),
-                        mediaBytes(userId, "face_input") + mediaBytes(userId, "face_output")),
+                        mediaBytes(userId, "face_input") + mediaBytes(userId, "face_output_current") + mediaBytes(userId, "face_output_improved")),
                 new DataCategory("notification", "알림 구독·기록",
                         count("select count(*) from web_push_subscriptions where user_id = ?", userId)
                                 + count("select count(*) from notification_attempts where user_id = ?", userId),
@@ -87,7 +87,8 @@ public class AccountDataService {
         rows += jdbc.update("delete from consents where user_id = ?", userId);
         rows += jdbc.update("delete from refresh_tokens where user_id = ?", userId);
         rows += jdbc.update("delete from balance_view_events where user_id = ?", userId);
-        rows += jdbc.update("delete from protection_events where user_id = ?", userId);
+        // protection_events는 불변 트리거(V3 trg_protection_events_immutable)로 보호되는 감사 로그라
+        // 삭제하지 않는다 — 계정 익명화로 개인 식별이 제거되므로 정책 문구("감사 목적 유지")와 일치.
         rows += jdbc.update("delete from protection_proposals where user_id = ?", userId);
         rows += jdbc.update("delete from plans where user_id = ?", userId);
         rows += jdbc.update("delete from media_blobs where user_id = ?", userId);
@@ -128,7 +129,7 @@ public class AccountDataService {
         long rows = jdbc.update("delete from face_simulation_outputs where user_id = ?", userId);
         rows += jdbc.update("delete from face_simulations where user_id = ?", userId);
         rows += jdbc.update(
-                "delete from media_blobs where user_id = ? and purpose in ('face_input', 'face_output')", userId);
+                "delete from media_blobs where user_id = ? and purpose in ('face_input', 'face_output_current', 'face_output_improved')", userId);
         return rows;
     }
 
